@@ -122,6 +122,9 @@ static const char *const kshim_menu_text_table[2][KSHIM_TEXT_COUNT] = {
         [KSHIM_TEXT_DEVICE_TB323FU_DESC] = "按 TB323FU 机型启动。",
         [KSHIM_TEXT_BOARD_TB322FC_NAME]  = "Y700 四代",
         [KSHIM_TEXT_BOARD_TB323FU_NAME]  = "Y700 五代",
+        [KSHIM_TEXT_DEVICE_TB321FU_NAME] = "Y700 2025 TB321FU",
+        [KSHIM_TEXT_DEVICE_TB321FU_DESC] = "按 TB321FU 机型启动。",
+        [KSHIM_TEXT_BOARD_TB321FU_NAME]  = "Y700 2025",
         [KSHIM_TEXT_SETTINGS_DEVICE_AUTO_FMT]   = "设备：自动（%s）",
         [KSHIM_TEXT_SETTINGS_DEVICE_MANUAL_FMT] = "设备：%s",
         [KSHIM_TEXT_SETTINGS_DEFAULT_FMT]       = "默认启动项：%s",
@@ -216,6 +219,9 @@ static const char *const kshim_menu_text_table[2][KSHIM_TEXT_COUNT] = {
         [KSHIM_TEXT_DEVICE_TB323FU_DESC] = "Boot for the TB323FU device.",
         [KSHIM_TEXT_BOARD_TB322FC_NAME]  = "Y700 Gen4",
         [KSHIM_TEXT_BOARD_TB323FU_NAME]  = "Y700 Gen5",
+        [KSHIM_TEXT_DEVICE_TB321FU_NAME] = "Y700 2025 TB321FU",
+        [KSHIM_TEXT_DEVICE_TB321FU_DESC] = "Boot for the TB321FU device.",
+        [KSHIM_TEXT_BOARD_TB321FU_NAME]  = "Y700 2025",
         [KSHIM_TEXT_SETTINGS_DEVICE_AUTO_FMT]   = "Device: Auto (%s)",
         [KSHIM_TEXT_SETTINGS_DEVICE_MANUAL_FMT] = "Device: %s",
         [KSHIM_TEXT_SETTINGS_DEFAULT_FMT]       = "Default boot entry: %s",
@@ -251,6 +257,7 @@ static const kshim_menu_text_id kshim_menu_role_name_table[KSHIM_MENU_ROLE_MAX +
     [KSHIM_MENU_ROLE_DEVICE_AUTO] = KSHIM_TEXT_DEVICE_AUTO_NAME,
     [KSHIM_MENU_ROLE_DEVICE_TB322FC] = KSHIM_TEXT_DEVICE_TB322FC_NAME,
     [KSHIM_MENU_ROLE_DEVICE_TB323FU] = KSHIM_TEXT_DEVICE_TB323FU_NAME,
+    [KSHIM_MENU_ROLE_DEVICE_TB321FU] = KSHIM_TEXT_DEVICE_TB321FU_NAME,
 };
 
 /* Role -> description id; KSHIM_TEXT_COUNT means "use the caller fallback". */
@@ -278,6 +285,7 @@ static const kshim_menu_text_id kshim_menu_role_desc_table[KSHIM_MENU_ROLE_MAX +
     [KSHIM_MENU_ROLE_DEVICE_AUTO] = KSHIM_TEXT_DEVICE_AUTO_DESC,
     [KSHIM_MENU_ROLE_DEVICE_TB322FC] = KSHIM_TEXT_DEVICE_TB322FC_DESC,
     [KSHIM_MENU_ROLE_DEVICE_TB323FU] = KSHIM_TEXT_DEVICE_TB323FU_DESC,
+    [KSHIM_MENU_ROLE_DEVICE_TB321FU] = KSHIM_TEXT_DEVICE_TB321FU_DESC,
 };
 
 kshim_menu_language_t kshim_menu_get_language(void)

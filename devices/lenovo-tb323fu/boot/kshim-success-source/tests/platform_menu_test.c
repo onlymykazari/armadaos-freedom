@@ -2040,8 +2040,9 @@ enum {
     SET_ROW_ANDROID = 0, SET_ROW_INTERNAL = 1, SET_ROW_TF = 2,
     SET_ROW_ADVANCED = 3, SET_ROW_SETTINGS = 4, SET_ROW_INFO = 5,
     SET_ROW_RESTART = 6, SET_ROW_OFF = 7,
-    /* Back rows of the settings-family pages. */
-    SET_SETTINGS_BACK = 3, SET_DEVICE_BACK = 3, SET_DEFAULT_BACK = 3,
+    /* Back rows of the settings-family pages. The device page gained the
+     * TB321FU row (auto / TB322FC / TB323FU / TB321FU / back). */
+    SET_SETTINGS_BACK = 3, SET_DEVICE_BACK = 4, SET_DEFAULT_BACK = 3,
     SET_LANGUAGE_BACK = 2,
 };
 

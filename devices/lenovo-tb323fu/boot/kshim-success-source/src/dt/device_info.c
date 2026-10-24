@@ -155,7 +155,7 @@ void device_info_read(const void *validated_fdt, struct device_info *info)
     const char *model, *compatible;
     int compat_len, off, rc;
     size_t cap, used;
-    bool truncated, tb322, tb323, soc8750, soc8850;
+    bool truncated, tb322, tb323, tb321, soc8750, soc8850, soc8650;
     uint64_t ram = 0;
 
     if (!info)
@@ -207,6 +207,8 @@ void device_info_read(const void *validated_fdt, struct device_info *info)
                   list_contains(compatible, compat_len, "qcom,canoep") ||
                   list_contains(compatible, compat_len, "qcom,kaanapali") ||
                   list_contains(compatible, compat_len, "qcom,sm8850");
+        soc8650 = list_contains(compatible, compat_len, "qcom,kirby") ||
+                  list_contains(compatible, compat_len, "qcom,sm8650");
 
         /* The trusted Linux reference pairing (elden + sm8750) is unchanged.
          * A stock TB322FC is additionally accepted from the measured .096
@@ -232,11 +234,38 @@ void device_info_read(const void *validated_fdt, struct device_info *info)
                      validated_fdt,
                      "qcom,mdss_dsi_baldur_nt36523_csot_3k_dsc_vid",
                      "nt36523 3k fhd plus 165Hz DPHY video panel"));
-        if (tb322 != tb323)
-            info->board = tb322 ? DEVICE_BOARD_TB322FC : DEVICE_BOARD_TB323FU;
 
-        if (soc8750 != soc8850)
-            info->soc = soc8750 ? DEVICE_SOC_SM8750 : DEVICE_SOC_SM8850;
+        /* A stock TB321FU (Kirby, SM8650) carries the exact "qcom,kirby" root
+         * without any SM8750/SM8850-family marker; its board identity comes
+         * only from the measured Kirby NT36523 panel fingerprint, BOE (the
+         * pstore-confirmed active panel) or CSOT variant. The named Lenovo
+         * entry matches the Linux reference device tree. */
+        tb321 = list_contains(compatible, compat_len, "lenovo,tb321fu") ||
+                (list_contains(compatible, compat_len, "qcom,kirby") &&
+                 !soc8750 && !soc8850 &&
+                 (stock_active_panel(
+                      validated_fdt,
+                      "qcom,mdss_dsi_kirby_nt36523_boe_dsc_vid",
+                      "nt36523 boe fhd plus 165Hz CPHY video panel") ||
+                  stock_active_panel(
+                      validated_fdt,
+                      "qcom,mdss_dsi_kirby_nt36523_csot_dsc_vid",
+                      "nt36523 fhd plus 165Hz CPHY video panel")));
+        {
+            unsigned boards = (tb322 ? 1u : 0u) + (tb323 ? 1u : 0u) + (tb321 ? 1u : 0u);
+            if (boards == 1u)
+                info->board = tb322 ? DEVICE_BOARD_TB322FC :
+                              tb323 ? DEVICE_BOARD_TB323FU :
+                                      DEVICE_BOARD_TB321FU;
+        }
+
+        {
+            unsigned socs = (soc8750 ? 1u : 0u) + (soc8850 ? 1u : 0u) + (soc8650 ? 1u : 0u);
+            if (socs == 1u)
+                info->soc = soc8750 ? DEVICE_SOC_SM8750 :
+                            soc8850 ? DEVICE_SOC_SM8850 :
+                                      DEVICE_SOC_SM8650;
+        }
     }
 
     rc = memory_total(validated_fdt, &ram);

@@ -13,6 +13,7 @@ static bool device_choice_valid(enum boot_device_choice choice)
     case BOOT_DEVICE_AUTO:
     case BOOT_DEVICE_TB322FC:
     case BOOT_DEVICE_TB323FU:
+    case BOOT_DEVICE_TB321FU:
         return true;
     default:
         return false;
@@ -51,6 +52,7 @@ static bool detected_valid(enum device_board board)
     case DEVICE_BOARD_UNKNOWN:
     case DEVICE_BOARD_TB322FC:
     case DEVICE_BOARD_TB323FU:
+    case DEVICE_BOARD_TB321FU:
         return true;
     default:
         return false;
@@ -100,6 +102,9 @@ int boot_settings_effective_board(const struct boot_settings *settings,
         break;
     case BOOT_DEVICE_TB323FU:
         *out = DEVICE_BOARD_TB323FU;
+        break;
+    case BOOT_DEVICE_TB321FU:
+        *out = DEVICE_BOARD_TB321FU;
         break;
     default:
         return BOOT_SETTINGS_INVALID;

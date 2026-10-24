@@ -75,8 +75,9 @@ typedef enum kshim_menu_role_t {
     KSHIM_MENU_ROLE_DEVICE_AUTO,
     KSHIM_MENU_ROLE_DEVICE_TB322FC,
     KSHIM_MENU_ROLE_DEVICE_TB323FU,
+    KSHIM_MENU_ROLE_DEVICE_TB321FU,
     /* Highest valid role; the role tables are sized with it + 1. */
-    KSHIM_MENU_ROLE_MAX = KSHIM_MENU_ROLE_DEVICE_TB323FU
+    KSHIM_MENU_ROLE_MAX = KSHIM_MENU_ROLE_DEVICE_TB321FU
 } kshim_menu_role_t;
 
 /* Localized label for a known role. UNKNOWN and BASE return `fallback`
@@ -111,6 +112,7 @@ const char *kshim_menu_role_description(kshim_menu_role_t role, const char *fall
 #define KSHIM_MENU_LABEL_DEV_AUTO   kshim_menu_role_name(KSHIM_MENU_ROLE_DEVICE_AUTO, NULL)
 #define KSHIM_MENU_LABEL_DEV_322    kshim_menu_role_name(KSHIM_MENU_ROLE_DEVICE_TB322FC, NULL)
 #define KSHIM_MENU_LABEL_DEV_323    kshim_menu_role_name(KSHIM_MENU_ROLE_DEVICE_TB323FU, NULL)
+#define KSHIM_MENU_LABEL_DEV_321    kshim_menu_role_name(KSHIM_MENU_ROLE_DEVICE_TB321FU, NULL)
 
 /* ------------------------------------------------------------------ */
 /* Text table                                                          */
@@ -225,6 +227,11 @@ typedef enum kshim_menu_text_id {
      * KSHIM_MENU_DESC_BACK ("back to the system boot options") stays with the
      * old page set. */
     KSHIM_TEXT_DESC_BACK_PARENT,
+
+    /* TB321FU device/board texts (appended; every earlier id keeps its value) */
+    KSHIM_TEXT_DEVICE_TB321FU_NAME,
+    KSHIM_TEXT_DEVICE_TB321FU_DESC,
+    KSHIM_TEXT_BOARD_TB321FU_NAME,
 
     KSHIM_TEXT_COUNT
 } kshim_menu_text_id;

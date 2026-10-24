@@ -765,10 +765,12 @@ static int menu_fill_device_info(struct menu_selection *menu)
     snprintf(menu->info_values[0], sizeof(menu->info_values[0]), "%s",
              info->board == DEVICE_BOARD_TB322FC ? "TB322FC" :
              info->board == DEVICE_BOARD_TB323FU ? "TB323FU" :
+             info->board == DEVICE_BOARD_TB321FU ? "TB321FU" :
              kshim_menu_text(KSHIM_TEXT_UNKNOWN));
     snprintf(menu->info_values[1], sizeof(menu->info_values[1]), "%s",
              info->soc == DEVICE_SOC_SM8750 ? "SM8750" :
              info->soc == DEVICE_SOC_SM8850 ? "SM8850" :
+             info->soc == DEVICE_SOC_SM8650 ? "SM8650" :
              kshim_menu_text(KSHIM_TEXT_UNKNOWN));
 
     /* Original DT model, bounded to a readable length on a UTF-8 boundary with
@@ -906,6 +908,7 @@ static const char *settings_board_name(enum device_board board)
 {
     if (board == DEVICE_BOARD_TB322FC) return kshim_menu_text(KSHIM_TEXT_BOARD_TB322FC_NAME);
     if (board == DEVICE_BOARD_TB323FU) return kshim_menu_text(KSHIM_TEXT_BOARD_TB323FU_NAME);
+    if (board == DEVICE_BOARD_TB321FU) return kshim_menu_text(KSHIM_TEXT_BOARD_TB321FU_NAME);
     return kshim_menu_text(KSHIM_TEXT_UNKNOWN);
 }
 /* Localized platform code for a board. */
@@ -913,6 +916,7 @@ static const char *settings_board_code(enum device_board board)
 {
     if (board == DEVICE_BOARD_TB322FC) return kshim_menu_text(KSHIM_TEXT_DEVICE_TB322FC_NAME);
     if (board == DEVICE_BOARD_TB323FU) return kshim_menu_text(KSHIM_TEXT_DEVICE_TB323FU_NAME);
+    if (board == DEVICE_BOARD_TB321FU) return kshim_menu_text(KSHIM_TEXT_DEVICE_TB321FU_NAME);
     return kshim_menu_text(KSHIM_TEXT_UNKNOWN);
 }
 /* Row index of the selectable Default-page row that matches the resolved
@@ -955,7 +959,8 @@ static int settings_payload_available(const struct menu_selection *menu, size_t 
     enum device_board board;
     if (!menu->payload_boards || i >= menu->caller_count) return 0;
     board = menu->payload_boards[i];
-    if (board != DEVICE_BOARD_TB322FC && board != DEVICE_BOARD_TB323FU) return 0;
+    if (board != DEVICE_BOARD_TB322FC && board != DEVICE_BOARD_TB323FU &&
+        board != DEVICE_BOARD_TB321FU) return 0;
     return board == menu->effective;
 }
 /* Resolve one Linux system role (INTERNAL / TF / DIAGNOSTIC) to its unique
@@ -1310,7 +1315,7 @@ static int menu_fill_settings(struct menu_selection *menu)
                     MENU_BACK, 0, KSHIM_MENU_ROLE_BACK))
         return -1;
 
-    /* Device page: auto / TB322FC / TB323FU / back. */
+    /* Device page: auto / TB322FC / TB323FU / TB321FU / back. */
     if (menu_append(&menu->pages[MENU_PAGE_DEVICE], KSHIM_MENU_LABEL_DEV_AUTO,
                     kshim_menu_text(KSHIM_TEXT_DEVICE_AUTO_DESC), MENU_DEVICE_SET, BOOT_DEVICE_AUTO,
                     KSHIM_MENU_ROLE_DEVICE_AUTO) ||
@@ -1320,6 +1325,9 @@ static int menu_fill_settings(struct menu_selection *menu)
         menu_append(&menu->pages[MENU_PAGE_DEVICE], KSHIM_MENU_LABEL_DEV_323,
                     kshim_menu_text(KSHIM_TEXT_DEVICE_TB323FU_DESC), MENU_DEVICE_SET, BOOT_DEVICE_TB323FU,
                     KSHIM_MENU_ROLE_DEVICE_TB323FU) ||
+        menu_append(&menu->pages[MENU_PAGE_DEVICE], KSHIM_MENU_LABEL_DEV_321,
+                    kshim_menu_text(KSHIM_TEXT_DEVICE_TB321FU_DESC), MENU_DEVICE_SET, BOOT_DEVICE_TB321FU,
+                    KSHIM_MENU_ROLE_DEVICE_TB321FU) ||
         menu_append(&menu->pages[MENU_PAGE_DEVICE], KSHIM_MENU_ACTION_BACK,
                     KSHIM_MENU_DESC_BACK_PARENT,
                     MENU_BACK, 0, KSHIM_MENU_ROLE_BACK))

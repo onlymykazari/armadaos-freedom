@@ -114,7 +114,7 @@ static void test_validate_rejects_out_of_range(void)
     bad = valid;
     bad.device_choice = (enum boot_device_choice)-1;
     assert(boot_settings_validate(&bad) == BOOT_SETTINGS_INVALID);
-    bad.device_choice = (enum boot_device_choice)3;
+    bad.device_choice = (enum boot_device_choice)4;
     assert(boot_settings_validate(&bad) == BOOT_SETTINGS_INVALID);
 
     bad = valid;
@@ -285,7 +285,7 @@ static void test_resolve_boundaries(void)
     assert(boot_settings_effective_board(&settings, (enum device_board)-1,
                                          &board) == BOOT_SETTINGS_INVALID);
     assert(board == DEVICE_BOARD_TB323FU);
-    assert(boot_settings_effective_board(&settings, (enum device_board)3,
+    assert(boot_settings_effective_board(&settings, (enum device_board)4,
                                          &board) == BOOT_SETTINGS_INVALID);
     assert(board == DEVICE_BOARD_TB323FU);
     assert(boot_settings_effective_board(NULL, DEVICE_BOARD_UNKNOWN, &board) ==
