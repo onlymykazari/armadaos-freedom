@@ -39,6 +39,14 @@ int kshim_dt_touch(const void *fdt, struct kshim_touch_resource *touch);
 int kshim_dt_gpio(const void *fdt, int provider, uint32_t pin,
                   uintptr_t *address, const char *function, uint32_t *mux);
 int kshim_dt_splash_reservation(const void *fdt, struct dt_range *memory, bool *no_map);
+/* DPU9 stability diagnostic: bitmask of scan fields that changed across the
+   last kshim_dt_splash stability re-read (bit 4 = SRC0_ADDR); 0 otherwise. */
+uint32_t kshim_dt_splash_flap_bits(void);
+/* DPU9 rejection diagnostics: the dpu9_note code of the first semantic
+   check that rejected the last walk, and its snapshot dump words
+   (0 format, 1 unpack, 2 src, 3 out, 4 xy, 5 op, 6 rect, 7 addr). */
+uint32_t kshim_dt_splash_reject(void);
+uint32_t kshim_dt_splash_dump(unsigned index);
 int kshim_dt_splash(const void *fdt, const struct CrIo *io,
                     kshim_framebuffer_config_t *framebuffer,
                     kshim_mmu_region_t *mmio);

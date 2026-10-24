@@ -673,6 +673,25 @@ int kshim_main(
         if (runtime_fdt)
             (void)dt_diagnostic_report_slots((void *)runtime_fdt, "pending",
                                              "pending");
+#if KSHIM_BOOTARG_TRACE
+        /* Milestone probe: s0 filled immediately after prefix activation and
+         * before the menu, carrying the already-completed resource-probe
+         * results (splash / SPMI status). This site precedes every risky
+         * path, so a still-pending slot here isolates a transport failure. */
+        if (runtime_fdt) {
+            const struct kshim_resources *trace_resources = kshim_resources_get();
+            char s0_report[81];
+            int ns = snprintf(s0_report, sizeof(s0_report),
+                              "res1:r=%d,%x,%x,%x,%x,%x,%x,%x",
+                              kshim_dt_splash_reject(),
+                              kshim_dt_splash_dump(0), kshim_dt_splash_dump(1),
+                              kshim_dt_splash_dump(2), kshim_dt_splash_dump(3),
+                              kshim_dt_splash_dump(4), kshim_dt_splash_dump(5),
+                              kshim_dt_splash_dump(6));
+            if (ns > 0 && ns < (int)sizeof(s0_report))
+                (void)dt_probe_report_slot((void *)runtime_fdt, 0, s0_report);
+        }
+#endif
         MANIFEST_VIEW view = {0};
         if (!get_manifest(
                 linux_base, manifest_address, manifest_size, &view)) {
@@ -1112,6 +1131,23 @@ int kshim_main(
                                  dt_handoff_failure_detail());
                 if (n > 0 && n < (int)sizeof(report))
                     dt_probe_report((void *)runtime_fdt, report);
+#if KSHIM_BOOTARG_TRACE
+                /* Fallback-path trace probe: single-slot write-once fill
+                 * carrying the failing handoff stage and splash status. */
+                {
+                    const struct kshim_resources *trace_resources =
+                        kshim_resources_get();
+                    char probe_report[81];
+                    int np = snprintf(probe_report, sizeof(probe_report),
+                                      "r14:s=%d:st=%s:a=%d",
+                                      trace_resources
+                                          ? trace_resources->splash_status : -99,
+                                      handoff_stage, status);
+                    if (np > 0 && np < (int)sizeof(probe_report))
+                        (void)dt_probe_report((void *)runtime_fdt,
+                                              probe_report);
+                }
+#endif
                 printf("Memory handoff failed; booting base image\n");
                 prepare_boot();
                 arm64_boot_linux(linux_base, device_tree_address, 4);
@@ -1139,6 +1175,19 @@ int kshim_main(
         if (entry->type == MF_ENTRY_TYPE_LINUX) {
             uint64_t entry_offset = entry->flags & MF_ENTRY_FLAG_BASE_IMAGE
                 ? 4 : entry->entry_offset;
+#if KSHIM_BOOTARG_TRACE
+            /* Success-path trace probe: single-slot write-once fill with the
+             * splash probe status right before the proven handoff. */
+            {
+                const struct kshim_resources *trace_resources = kshim_resources_get();
+                char probe_report[81];
+                int np = snprintf(probe_report, sizeof(probe_report),
+                                  "r14:s=%d:st=hd",
+                                  trace_resources ? trace_resources->splash_status : -99);
+                if (np > 0 && np < (int)sizeof(probe_report))
+                    (void)dt_probe_report((void *)runtime_fdt, probe_report);
+            }
+#endif
             printf("Booting ");
             print_entry_name(entry);
             printf(" at 0x%lx with DTB at 0x%lx\n",

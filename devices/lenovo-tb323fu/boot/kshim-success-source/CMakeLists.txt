@@ -54,6 +54,7 @@ option(KSHIM_DIAGNOSTIC_BASE_ONLY "Diagnostic only: hand off to the packed Linux
 option(KSHIM_DIAGNOSTIC_RESOURCES_ONLY "Diagnostic only: probe DT/console/resources, then hand off to the packed Linux base image after quiescing the console; no menu and no post-checkpoint peripheral probes; incompatible with KSHIM_STANDALONE and KSHIM_DIAGNOSTIC_BASE_ONLY" OFF)
 option(KSHIM_RAMOOPS_RECOVERY_ONLY "Recovery only: read-only ramoops recovery entry after runtime DT validation; no console/resources/UI/Linux; incompatible with KSHIM_STANDALONE and the diagnostic handoff switches" OFF)
 option(KSHIM_DIAGNOSTIC_DT_ONLY "Diagnostic only: pure DT parsing (validation, device info, layout-only ramoops capture, memory snapshot) then an immediate handoff to the packed Linux base image; no console, resources, peripherals, MMU or UI; incompatible with KSHIM_STANDALONE and the other diagnostic/recovery switches" OFF)
+option(KSHIM_BOOTARG_TRACE "Normal menu boot flow with one additional length-preserving bootargs diagnostic slot write just before the payload handoff; the handoff path itself is unchanged and any report failure is ignored" OFF)
 if(KSHIM_DIAGNOSTIC_BASE_ONLY AND KSHIM_STANDALONE)
     message(FATAL_ERROR "KSHIM_DIAGNOSTIC_BASE_ONLY is forbidden together with KSHIM_STANDALONE")
 endif()
@@ -83,6 +84,7 @@ add_compile_definitions(KSHIM_STANDALONE=$<BOOL:${KSHIM_STANDALONE}>
     KSHIM_DIAGNOSTIC_RESOURCES_ONLY=$<BOOL:${KSHIM_DIAGNOSTIC_RESOURCES_ONLY}>
     KSHIM_DIAGNOSTIC_DT_ONLY=$<BOOL:${KSHIM_DIAGNOSTIC_DT_ONLY}>
     KSHIM_RAMOOPS_RECOVERY_ONLY=$<BOOL:${KSHIM_RAMOOPS_RECOVERY_ONLY}>
+    KSHIM_BOOTARG_TRACE=$<BOOL:${KSHIM_BOOTARG_TRACE}>
     KSHIM_LINK_ADDRESS=${KSHIM_LINK_ADDRESS} KSHIM_RUNTIME_SLOT_SIZE=${KSHIM_RUNTIME_SLOT_SIZE})
 
 # Generate common variables pass to Kconfig
