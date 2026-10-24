@@ -913,7 +913,7 @@ new file mode 100644
 index 0000000..be517cb
 --- /dev/null
 +++ b/Include/Library/cr_splash.h
-@@ -0,0 +1,26 @@
+@@ -0,0 +1,30 @@
 +/* SPDX-License-Identifier: MIT */
 +#pragma once
 +#include <Library/cr_geni.h>
@@ -928,6 +928,10 @@ index 0000000..be517cb
 +    unsigned pipe_count, ctl_count, mixer_count;
 +    bool lm_source_select;
 +    bool sspp_rec_separated;
++    /* DPU9 (SM8650): legacy register walk with the ten-pipe topology;
++       DMA4/DMA5 (ids 8/9) live in CTL_LAYER_EXT4, which the legacy walk
++       never reads, so they can never enter the discovered route. */
++    bool dpu9_legacy;
 +    uint8_t mixer_id[8];
 +    uint32_t stage[11];
 +    unsigned stage_count;
@@ -2156,7 +2160,7 @@ new file mode 100644
 index 0000000..103ac0b
 --- /dev/null
 +++ b/Library/DisplayLib/splash.c
-@@ -0,0 +1,537 @@
+@@ -0,0 +1,539 @@
 +/* SPDX-License-Identifier: MIT */
 +#include <Library/cr_splash.h>
 +#include <oskal/cr_string.h>
@@ -2615,11 +2619,13 @@ index 0000000..103ac0b
 +        !r->pipe_count || !r->ctl_count || !r->mixer_count || !r->reserved_size) return CR_BUS_INVALID;
 +    if (r->sspp_rec_separated && !r->lm_source_select) return CR_BUS_INVALID;
 +    bool canoe = r->lm_source_select;
-+    if (r->pipe_count > (canoe ? 10 : 8) || r->ctl_count > 8 || r->mixer_count > (canoe ? 8 : 6))
++    bool dpu9 = r->dpu9_legacy;
++    if (r->pipe_count > ((canoe || dpu9) ? 10 : 8) || r->ctl_count > 8 ||
++        r->mixer_count > (canoe ? 8 : 6))
 +        return CR_BUS_INVALID;
 +    unsigned ids = 0;
 +    for (unsigned p = 0; p < r->pipe_count; ++p) {
-+        if (r->pipe_id[p] > (canoe ? 9 : 7) || (ids & (1U << r->pipe_id[p])) ||
++        if (r->pipe_id[p] > ((canoe || dpu9) ? 9 : 7) || (ids & (1U << r->pipe_id[p])) ||
 +            (r->pipe[p] & 3) || !within(0, r->size, r->pipe[p], r->sspp_rec_separated ? 0x1078 : 0x174) ||
 +            (r->sspp_rec_separated && (uint64_t)r->pipe[p] + 0x1077 > UINT32_MAX)) return CR_BUS_INVALID;
 +        ids |= 1U << r->pipe_id[p];

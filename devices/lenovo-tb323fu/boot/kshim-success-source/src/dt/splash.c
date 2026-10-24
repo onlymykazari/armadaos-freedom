@@ -297,6 +297,7 @@ int kshim_dt_splash(const void *f, const struct CrIo *io,
     bool lm_source_select = sun || canoe;
     resources.lm_source_select = lm_source_select;
     resources.sspp_rec_separated = canoe;
+    resources.dpu9_legacy = dpu9;
     int pipes = offsets(f, sde, "qcom,sde-sspp-off", resources.pipe,
                         (lm_source_select || dpu9) ? 10 : 8);
     int ctls = offsets(f, sde, "qcom,sde-ctl-off", resources.ctl, 8);
