@@ -160,6 +160,10 @@ CONFIG_SM_GPUCC_8550=y
 CONFIG_SM_VIDEOCC_8550=y
 CONFIG_SM_CAMCC_8550=y
 CONFIG_PHY_QCOM_QMP_PCIE=y
+# Visible boot: the kShimC handoff adds a simple-framebuffer node; without a
+# driver for it the diagnostic kernel boots headless (observed: silent black
+# screen after selecting the diagnostic entry).
+CONFIG_DRM_SIMPLEDRM=y
 
 # ---- Misc large subsystems the diagnostic payload does not need ----
 # CONFIG_SOUND is not set
