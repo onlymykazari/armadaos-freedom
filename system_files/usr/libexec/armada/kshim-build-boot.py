@@ -95,7 +95,7 @@ TIMEOUT_MS = 8000
 
 BASE_NAME = "原厂 Android"
 LINUX_NAME = "Linux 诊断模式"
-DTB_NAME = "TB322FC Diagnostic DTB"
+DTB_NAME = "Linux Diagnostic DTB"
 BLOB_NAME = "Maintenance initramfs"
 SHIM_NAME = "Attached Shim"
 
@@ -138,8 +138,11 @@ ALLOWED_CHOSEN_PROPS = frozenset((
     "linux,initrd-end",
 ))
 
-# Gen4 Linux board identification: device_info.c requires this exact pairing.
+# Known Linux board identifications: device_info.c requires these exact
+# pairings. The TB321FU (SM8650 Kirby) pairing matches the vendored
+# sm8650-lenovo-tb321fu.dts from armada-tb321fu.
 REQUIRED_COMPATIBLE = ("lenovo,elden", "qcom,sm8750")
+REQUIRED_COMPATIBLE_TB321FU = ("lenovo,tb321fu", "qcom,sm8650")
 # Gen5 fingerprints that must never appear in the Gen4 diagnostic DTB.
 FORBIDDEN_COMPATIBLE = frozenset((
     "lenovo,baldur",
@@ -816,9 +819,12 @@ def build_dtb(inputs, bootargs, boot_stage="maintenance", root_medium=None,
 
     compatible = fdtget_strings(inputs["dtb"], "/", "compatible",
                                 tagged("fdtget-compat-src"))
-    for required in REQUIRED_COMPATIBLE:
-        check("dtb:compatible-required:%s" % required, required in compatible,
-              "compatible=%r" % compatible)
+    # Accept either known Linux board pairing; everything else is rejected.
+    is_elden = all(entry in compatible for entry in REQUIRED_COMPATIBLE)
+    is_tb321fu = all(entry in compatible
+                     for entry in REQUIRED_COMPATIBLE_TB321FU)
+    check("dtb:compatible-known-board", is_elden or is_tb321fu,
+          "compatible=%r" % (compatible,))
     for forbidden in sorted(FORBIDDEN_COMPATIBLE):
         check("dtb:compatible-forbidden:%s" % forbidden,
               forbidden not in compatible, "compatible=%r" % compatible)
