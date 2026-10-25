@@ -231,9 +231,14 @@ if [ -f "${KCONFIG_OVERRIDES}" ]; then
     # cover disable requests (# CONFIG_X is not set) whose subject vanished
     # with its parent: under a trimmed fragment that is expected, not an error.
     if [ "${config_error}" -ne 0 ]; then
-        rm -f "${frag}" "${merge_log}"
-        echo "ERROR: a requested CONFIG didn't survive Kconfig deps (see above); check the depends-on chain."
-        exit 1
+        if [ "${KCONFIG_RELAXED:-0}" = "1" ]; then
+            echo "WARNING: some requested CONFIGs were demoted (KCONFIG_RELAXED=1; continuing)"
+            config_error=0
+        else
+            rm -f "${frag}" "${merge_log}"
+            echo "ERROR: a requested CONFIG didn't survive Kconfig deps (see above); check the depends-on chain."
+            exit 1
+        fi
     fi
     rm -f "${frag}" "${merge_log}"
 fi
