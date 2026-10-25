@@ -174,8 +174,6 @@ CONFIG_PSTORE_RAM=y
 # CONFIG_DRM_MSM is not set
 
 # ---- Misc large subsystems the diagnostic payload does not need ----
-# CONFIG_SOUND is not set
-# CONFIG_SND is not set
 # CONFIG_MEDIA_SUPPORT is not set
 # CONFIG_VIDEO_DEV is not set
 # CONFIG_FPGA is not set
