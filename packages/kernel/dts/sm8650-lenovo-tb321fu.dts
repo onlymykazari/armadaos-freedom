@@ -1254,14 +1254,15 @@
 	};
 
 	/*
-	 * Black-box for the diagnostic payload: the last MiB of the splash
-	 * reservation, far past the 800x2560x4 scanout extent. pstore/ramoops
+	 * Black-box for the diagnostic payload: the last MiB of RAM
+	 * (0xC00000000 bank top, per the shim-reported map). pstore/ramoops
 	 * captures the early kernel log so a boot that dies before the console
-	 * or USB come up still leaves its post-mortem readable from Android.
+	 * or USB come up still leaves its post-mortem readable by the shim on
+	 * the next boot (ABL never touches high RAM).
 	 */
-	ramoops: ramoops@d7a00000 {
+	ramoops: ramoops@bfff00000 {
 		compatible = "ramoops";
-		reg = <0 0xd7a00000 0 0x100000>;
+		reg = <0x0b 0xfff00000 0x0 0x100000>;
 		record-size = <0x20000>;
 		console-size = <0x80000>;
 		pmsg-size = <0x20000>;
