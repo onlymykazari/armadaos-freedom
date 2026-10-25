@@ -434,7 +434,12 @@ CONFIG_CRYPTO_SHA256=y
 CONFIG_CRYPTO_SHA512=y
 
 # ============== Payload size (kShimC packed image budget) ==============
-# The diagnostic dual-entry image must fit the bootloader raw budget;
-# zstd shrinks the 78 MiB uncompressed Image to roughly a third.
-CONFIG_KERNEL_ZSTD=y
-# CONFIG_KERNEL_GZIP is not set
+# arm64 no longer selects HAVE_KERNEL_*: the Image is uncompressed, and the
+# 78 MiB defconfig Image pushed the packed dual-entry boot past the
+# bootloader raw budget (hardware: the shim never ran). Vendor-specific
+# driver mass is trimmed via the diagnostic fragment; Qualcomm platform
+# support stays built-in.
+CONFIG_ARCH_QCOM=y
+# CONFIG_DRM_NOUVEAU is not set
+# CONFIG_DRM_AMDGPU is not set
+# CONFIG_DRM_RADEON is not set

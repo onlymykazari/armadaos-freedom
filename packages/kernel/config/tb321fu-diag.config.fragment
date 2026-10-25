@@ -1,0 +1,163 @@
+# TB321FU diagnostic-payload size fragment.
+# Merged on top of defconfig + armada-kernel.config.overrides for the packed
+# dual-entry boot image, whose raw size must stay inside the bootloader
+# budget. Boards and subsystems irrelevant to the SM8650 diagnostic payload
+# are disabled; the Qualcomm display/USB/thermal stack stays built-in.
+# merge_config.sh verifies every =y below survives Kconfig dependencies.
+
+# ---- Other vendors' platform drivers (biggest defconfig mass) ----
+# CONFIG_ARCH_NVIDIA is not set
+# CONFIG_ARCH_TEGRA is not set
+# CONFIG_ARCH_SAMSUNG is not set
+# CONFIG_ARCH_MEDIATEK is not set
+# CONFIG_ARCH_ROCKCHIP is not set
+# CONFIG_ARCH_ALLWINNER is not set
+# CONFIG_ARCH_SUNXI is not set
+# CONFIG_ARCH_BRCMSTB is not set
+# CONFIG_ARCH_BCM is not set
+# CONFIG_ARCH_NXP is not set
+# CONFIG_ARCH_LAYERSCAPE is not set
+# CONFIG_ARCH_HISI is not set
+# CONFIG_ARCH_XILINX is not set
+# CONFIG_ARCH_RENESAS is not set
+# CONFIG_ARCH_UNIPHIER is not set
+# CONFIG_ARCH_SPRD is not set
+# CONFIG_ARCH_ACTIONS is not set
+# CONFIG_ARCH_AGILEX is not set
+# CONFIG_ARCH_BITMAIN is not set
+# CONFIG_ARCH_N5X is not set
+# CONFIG_ARCH_KEEMBAY is not set
+# CONFIG_ARCH_LG1K is not set
+# CONFIG_ARCH_MESON is not set
+# CONFIG_ARCH_MVEBU is not set
+# CONFIG_ARCH_THUNDER is not set
+# CONFIG_ARCH_THUNDER2 is not set
+# CONFIG_ARCH_SEATTLE is not set
+# CONFIG_ARCH_SYNQUACER is not set
+# CONFIG_ARCH_TESLA_FSD is not set
+# CONFIG_ARCH_EXYNOS is not set
+# CONFIG_ARCH_QCOM is kept enabled
+
+# ---- External GPUs / display bridges ----
+# CONFIG_DRM_NOUVEAU is not set
+# CONFIG_DRM_AMDGPU is not set
+# CONFIG_DRM_RADEON is not set
+# CONFIG_DRM_I915 is not set
+# CONFIG_DRM_XE is not set
+# CONFIG_DRM_VMWGFX is not set
+# CONFIG_DRM_GMA500 is not set
+# CONFIG_DRM_PANEL_BRIDGE is not set
+# CONFIG_DRM_ITE_IT6505 is not set
+# CONFIG_DRM_LONTIUM_LT8912B is not set
+# CONFIG_DRM_LONTIUM_LT9611 is not set
+# CONFIG_DRM_LONTIUM_LT9611UXC is not set
+# CONFIG_DRM_SII902X is not set
+# CONFIG_DRM_SII9234 is not set
+# CONFIG_DRM_TOSHIBA_TC358762 is not set
+# CONFIG_DRM_TI_SN65DSI83 is not set
+# CONFIG_DRM_TI_SN65DSI86 is not set
+# CONFIG_DRM_ANALOGIX_ANX7625 is not set
+# CONFIG_DRM_PARADE_PS8640 is not set
+
+# ---- Non-Qualcomm wired network drivers ----
+# CONFIG_NET_VENDOR_3COM is not set
+# CONFIG_NET_VENDOR_ADAPTEC is not set
+# CONFIG_NET_VENDOR_AGERE is not set
+# CONFIG_NET_VENDOR_ALACRITECH is not set
+# CONFIG_NET_VENDOR_ALTEON is not set
+# CONFIG_NET_VENDOR_AMAZON is not set
+# CONFIG_NET_VENDOR_AMD is not set
+# CONFIG_NET_VENDOR_AQUANTIA is not set
+# CONFIG_NET_VENDOR_ATHEROS is not set
+# CONFIG_NET_VENDOR_BROADCOM is not set
+# CONFIG_NET_VENDOR_BROCADE is not set
+# CONFIG_NET_VENDOR_CAVIUM is not set
+# CONFIG_NET_VENDOR_CHELSIO is not set
+# CONFIG_NET_VENDOR_CISCO is not set
+# CONFIG_NET_VENDOR_CORTINA is not set
+# CONFIG_NET_VENDOR_DEC is not set
+# CONFIG_NET_VENDOR_DLINK is not set
+# CONFIG_NET_VENDOR_EMULEX is not set
+# CONFIG_NET_VENDOR_EZCHIP is not set
+# CONFIG_NET_VENDOR_FUNGIBLE is not set
+# CONFIG_NET_VENDOR_HISILICON is not set
+# CONFIG_NET_VENDOR_HP is not set
+# CONFIG_NET_VENDOR_HUAWEI is not set
+# CONFIG_NET_VENDOR_INTEL is not set
+# CONFIG_NET_VENDOR_MARVELL is not set
+# CONFIG_NET_VENDOR_MICREL is not set
+# CONFIG_NET_VENDOR_MICROCHIP is not set
+# CONFIG_NET_VENDOR_MICROSEMI is not set
+# CONFIG_NET_VENDOR_MYRI is not set
+# CONFIG_NET_VENDOR_NATSEMI is not set
+# CONFIG_NET_VENDOR_NETERION is not set
+# CONFIG_NET_VENDOR_NETRONOME is not set
+# CONFIG_NET_VENDOR_NI is not set
+# CONFIG_NET_VENDOR_NVIDIA is not set
+# CONFIG_NET_VENDOR_OKI is not set
+# CONFIG_NET_VENDOR_PACKET_ENGINES is not set
+# CONFIG_NET_VENDOR_PENSANDO is not set
+# CONFIG_NET_VENDOR_QLOGIC is not set
+# CONFIG_NET_VENDOR_REALTEK is not set
+# CONFIG_NET_VENDOR_RDC is not set
+# CONFIG_NET_VENDOR_SILAN is not set
+# CONFIG_NET_VENDOR_SIS is not set
+# CONFIG_NET_VENDOR_SOLARFLARE is not set
+# CONFIG_NET_VENDOR_SMSC is not set
+# CONFIG_NET_VENDOR_STMICRO is not set
+# CONFIG_NET_VENDOR_SUN is not set
+# CONFIG_NET_VENDOR_SYNOPSYS is not set
+# CONFIG_NET_VENDOR_TEHUTI is not set
+# CONFIG_NET_VENDOR_TI is not set
+# CONFIG_NET_VENDOR_VERTEXCOM is not set
+# CONFIG_NET_VENDOR_VIA is not set
+# CONFIG_NET_VENDOR_WANGXUN is not set
+# CONFIG_NET_VENDOR_WIZNET is not set
+# CONFIG_NET_VENDOR_XILINX is not set
+
+# ---- Wireless drivers beyond the Qualcomm stack ----
+# CONFIG_WLAN_VENDOR_ADMTEK is not set
+# CONFIG_WLAN_VENDOR_ATH is not set
+# CONFIG_WLAN_VENDOR_ATMEL is not set
+# CONFIG_WLAN_VENDOR_BROADCOM is not set
+# CONFIG_WLAN_VENDOR_INTEL is not set
+# CONFIG_WLAN_VENDOR_INTERSIL is not set
+# CONFIG_WLAN_VENDOR_MARVELL is not set
+# CONFIG_WLAN_VENDOR_MEDIATEK is not set
+# CONFIG_WLAN_VENDOR_MICROCHIP is not set
+# CONFIG_WLAN_VENDOR_PURELIFI is not set
+# CONFIG_WLAN_VENDOR_RALINK is not set
+# CONFIG_WLAN_VENDOR_REALTEK is not set
+# CONFIG_WLAN_VENDOR_RSI is not set
+# CONFIG_WLAN_VENDOR_SILABS is not set
+# CONFIG_WLAN_VENDOR_ST is not set
+# CONFIG_WLAN_VENDOR_TI is not set
+# CONFIG_WLAN_VENDOR_ZYDAS is not set
+# CONFIG_WLAN_VENDOR_QUANTENNA is not set
+
+# ---- Misc large subsystems the diagnostic payload does not need ----
+# CONFIG_SOUND is not set
+# CONFIG_SND is not set
+# CONFIG_MEDIA_SUPPORT is not set
+# CONFIG_VIDEO_DEV is not set
+# CONFIG_FPGA is not set
+# CONFIG_STAGING is not set
+# CONFIG_GPIO_AGGREGATOR is not set
+# CONFIG_SENSORS_LIS3_I2C is not set
+# CONFIG_EXT2_FS is not set
+# CONFIG_FUSE_FS is not set
+# CONFIG_NFS_FS is not set
+# CONFIG_NFSD is not set
+# CONFIG_CEPH_FS is not set
+# CONFIG_SCSI_LOWLEVEL is not set
+# CONFIG_MD is not set
+# CONFIG_BLK_DEV_DM is not set
+# CONFIG_SWAP is not set
+
+# ---- Debug/trace weight ----
+# CONFIG_FTRACE is not set
+# CONFIG_KPROBES is not set
+# CONFIG_BPF_SYSCALL is not set
+# CONFIG_BPF_JIT is not set
+# CONFIG_USER_NS is not set
+# CONFIG_MODULE_SIG is not set
