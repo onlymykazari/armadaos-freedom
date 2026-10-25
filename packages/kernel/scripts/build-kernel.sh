@@ -219,6 +219,14 @@ if [ -f "${KCONFIG_OVERRIDES}" ]; then
                 ;;
         esac
     done < "${frag}"
+    # Apply disable requests from the fragment explicitly: merge_config's
+    # defconfig pass may not honor "is not set" lines against =y defaults.
+    grep -E '^# CONFIG_[A-Z0-9_]+ is not set' "${KCONFIG_OVERRIDES}" 2>/dev/null |
+        sed -E 's/^# (CONFIG_[A-Z0-9_]+) is not set/\1/' |
+        while IFS= read -r sym; do
+            scripts/config --file .config -d "$sym"
+        done
+    make olddefconfig >/dev/null 2>&1
     # Only a failed =y request is fatal. The "not in final .config" warnings
     # cover disable requests (# CONFIG_X is not set) whose subject vanished
     # with its parent: under a trimmed fragment that is expected, not an error.
