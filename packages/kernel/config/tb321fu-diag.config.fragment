@@ -135,6 +135,32 @@
 # CONFIG_WLAN_VENDOR_ZYDAS is not set
 # CONFIG_WLAN_VENDOR_QUANTENNA is not set
 
+# ---- Qualcomm interconnect dependencies preserved explicitly ----
+# The mass-trim above removes the Kconfig contexts that normally carry these
+# =y requests; re-anchor the SM8650-essential stack so merge_config's strict
+# verification passes (QRTR -> QMI -> PDR/APR -> clk/phy/soc drivers).
+CONFIG_NET=y
+CONFIG_PCI=y
+CONFIG_MAILBOX=y
+CONFIG_RPMSG=y
+CONFIG_RPMSG_CHAR=y
+CONFIG_QRTR=y
+CONFIG_QRTR_SMD=y
+CONFIG_QRTR_MHI=y
+CONFIG_QCOM_QMI_HELPERS=y
+CONFIG_QCOM_PDR_HELPERS=y
+CONFIG_QCOM_PDR_MSG=y
+CONFIG_QCOM_PD_MAPPER=y
+CONFIG_QCOM_APR=y
+CONFIG_QCOM_AOSS_QMP=y
+CONFIG_SM_GCC_8550=y
+CONFIG_SM_GCC_8650=y
+CONFIG_SM_DISPCC_8550=y
+CONFIG_SM_GPUCC_8550=y
+CONFIG_SM_VIDEOCC_8550=y
+CONFIG_SM_CAMCC_8550=y
+CONFIG_PHY_QCOM_QMP_PCIE=y
+
 # ---- Misc large subsystems the diagnostic payload does not need ----
 # CONFIG_SOUND is not set
 # CONFIG_SND is not set
@@ -155,7 +181,8 @@
 # CONFIG_SWAP is not set
 
 # ---- Debug/trace weight ----
-# CONFIG_FTRACE is not set
+# (DYNAMIC_DEBUG stays: the armada overrides request it =y and FTRACE-off
+# would silently demote it, failing the strict =y verification.)
 # CONFIG_KPROBES is not set
 # CONFIG_BPF_SYSCALL is not set
 # CONFIG_BPF_JIT is not set

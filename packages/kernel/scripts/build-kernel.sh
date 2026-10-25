@@ -219,7 +219,10 @@ if [ -f "${KCONFIG_OVERRIDES}" ]; then
                 ;;
         esac
     done < "${frag}"
-    if [ "${config_error}" -ne 0 ] || grep -q "not in final .config" "${merge_log}"; then
+    # Only a failed =y request is fatal. The "not in final .config" warnings
+    # cover disable requests (# CONFIG_X is not set) whose subject vanished
+    # with its parent: under a trimmed fragment that is expected, not an error.
+    if [ "${config_error}" -ne 0 ]; then
         rm -f "${frag}" "${merge_log}"
         echo "ERROR: a requested CONFIG didn't survive Kconfig deps (see above); check the depends-on chain."
         exit 1
