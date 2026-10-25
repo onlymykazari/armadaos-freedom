@@ -14,7 +14,7 @@ OUT_DIR="${OUT_DIR:-${REPO_ROOT}/out}"
 SERIES_FILE="${REPO_ROOT}/patches/series"
 PATCHES_DIR="${REPO_ROOT}/patches"
 DTS_DIR="${REPO_ROOT}/dts"
-KCONFIG_OVERRIDES="${REPO_ROOT}/config/armada-kernel.config.overrides"
+KCONFIG_OVERRIDES="${KCONFIG_OVERRIDES:-${REPO_ROOT}/config/armada-kernel.config.overrides}"
 
 # ---------- Host arch / cross-compile setup ----------
 HOST_ARCH=$(uname -m)
