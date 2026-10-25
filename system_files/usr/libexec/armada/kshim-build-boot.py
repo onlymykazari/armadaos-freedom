@@ -890,9 +890,10 @@ def build_dtb(inputs, bootargs, boot_stage="maintenance", root_medium=None,
           "totalsize mismatch")
     d_compat = fdtget_strings(derived, "/", "compatible",
                               tagged("fdtget-compat-derived"))
-    for required in REQUIRED_COMPATIBLE:
-        check("dtb:derived-compatible-required:%s" % required,
-              required in d_compat, "compatible=%r" % d_compat)
+    check("dtb:derived-compatible-known-board",
+          all(entry in d_compat for entry in REQUIRED_COMPATIBLE) or
+          all(entry in d_compat for entry in REQUIRED_COMPATIBLE_TB321FU),
+          "compatible=%r" % (d_compat,))
     for forbidden in sorted(FORBIDDEN_COMPATIBLE):
         check("dtb:derived-compatible-forbidden:%s" % forbidden,
               forbidden not in d_compat, "compatible=%r" % d_compat)
