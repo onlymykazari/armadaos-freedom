@@ -36,6 +36,28 @@
 
 	chosen {
 		stdout-path = "serial0:115200n8";
+		#address-cells = <2>;
+		#size-cells = <2>;
+		ranges;
+
+		/*
+		 * The panel is the only console: no UART is wired out. ABL
+		 * hands the display over still scanning out of the splash
+		 * buffer. MDSS stays disabled in the diagnostic payload: the
+		 * msm driver taking over a live bootloader scanout stalls the
+		 * AXI/NoC. kShimC rewrites reg/width/height/stride/format at
+		 * handoff from the live splash probe; the static values only
+		 * need to satisfy its prevalidation.
+		 */
+		framebuffer0: framebuffer@d5100000 {
+			compatible = "simple-framebuffer";
+			reg = <0x0 0xd5100000 0x0 (800 * 2560 * 4)>;
+			width = <800>;
+			height = <2560>;
+			stride = <(800 * 8)>;
+			format = "x8r8g8b8";
+			status = "disabled";
+		};
 	};
 
 	gpio-keys {
@@ -1228,6 +1250,21 @@
 	splash_region: splash-region {
 		label = "cont_splash_region";
 		reg = <0 0xd5100000 0 0x2b00000>;
+		no-map;
+	};
+
+	/*
+	 * Black-box for the diagnostic payload: the last MiB of the splash
+	 * reservation, far past the 800x2560x4 scanout extent. pstore/ramoops
+	 * captures the early kernel log so a boot that dies before the console
+	 * or USB come up still leaves its post-mortem readable from Android.
+	 */
+	ramoops: ramoops@d7a00000 {
+		compatible = "ramoops";
+		reg = <0 0xd7a00000 0 0x100000>;
+		record-size = <0x20000>;
+		console-size = <0x80000>;
+		pmsg-size = <0x20000>;
 		no-map;
 	};
 };

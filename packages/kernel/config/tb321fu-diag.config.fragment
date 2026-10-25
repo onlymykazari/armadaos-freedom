@@ -164,6 +164,9 @@ CONFIG_PHY_QCOM_QMP_PCIE=y
 # driver for it the diagnostic kernel boots headless (observed: silent black
 # screen after selecting the diagnostic entry).
 CONFIG_DRM_SIMPLEDRM=y
+# Black-box: the DTS ramoops node (splash reservation tail) + pstore console
+# capture the early kernel log for post-mortem from Android.
+CONFIG_PSTORE_RAM=y
 # Diagnostic payload: keep the simpledrm framebuffer for the whole session.
 # Hardware evidence: with DRM_MSM enabled the boot shows one fbcon frame and
 # then goes dark (MSM DPU probe takes over the scanout and the panel init
