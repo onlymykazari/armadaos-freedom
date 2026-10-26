@@ -167,6 +167,10 @@ CONFIG_DRM_SIMPLEDRM=y
 # Black-box: the DTS ramoops node (splash reservation tail) + pstore console
 # capture the early kernel log for post-mortem from Android.
 CONFIG_PSTORE_RAM=y
+# Display keep-alive for the diagnostic payload: the KTZ8866 backlight IC
+# on i2c8 must come up or the panel stays dark even with a working fb0
+# (measured: simpledrm fb0 registered, screen black).
+CONFIG_BACKLIGHT_KTZ8866=y
 # Diagnostic payload: keep the simpledrm framebuffer for the whole session.
 # Hardware evidence: with DRM_MSM enabled the boot shows one fbcon frame and
 # then goes dark (MSM DPU probe takes over the scanout and the panel init
