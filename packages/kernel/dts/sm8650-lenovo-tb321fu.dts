@@ -29,6 +29,21 @@
 	model = "Lenovo Legion Y700 (2025) / TB321FU";
 	compatible = "lenovo,tb321fu", "qcom,sm8650";
 
+	/*
+	 * Real DRAM bank, measured live by the shim's memory probe (input walk of
+	 * the ABL runtime DT: one bank, 0xa0000000..0xc00000000, 15622 MiB
+	 * usable). The Kirby ABL does NOT append a memory node to the DT it hands
+	 * the shim (unlike the Gen4/5 ABLs), so without this node the early MMU
+	 * maps no RAM, the shim runs at uncached speed (the ~20 s menu), the
+	 * device-info page shows "DT reported RAM: unknown", and a Linux payload
+	 * receiving the unmodified tree dies with an empty memmap. The handoff
+	 * memory overlay still rewrites reg from the live snapshot at boot.
+	 */
+	memory@a0000000 {
+		device_type = "memory";
+		reg = <0x0 0xa0000000 0x0 0xc0000000>;
+	};
+
 	aliases {
 		serial0 = &uart15;
 		serial1 = &uart14;
@@ -1233,21 +1248,6 @@
 			"qcom/sm8650/lenovo/tb321fu/cdsp_dtb.mdt";
 
 	status = "okay";
-};
-
-/*
- * Real DRAM bank, measured live by the shim's memory probe (input walk of the
- * ABL runtime DT: one bank, 0xa0000000..0xc00000000, 15622 MiB usable). The
- * Kirby ABL does NOT append a memory node to the DT it hands the shim (unlike
- * the Gen4/5 ABLs), so without this node the early MMU maps no RAM, the shim
- * runs at uncached speed (the ~20 s menu), the device-info page shows
- * "DT reported RAM: unknown", and a Linux payload receiving the unmodified
- * tree dies with an empty memmap. The ABL runtime size may differ; the
- * handoff memory overlay rewrites reg from the live snapshot at boot.
- */
-memory@a0000000 {
-	device_type = "memory";
-	reg = <0x0 0xa0000000 0x0 0xc0000000>;
 };
 
 &reserved_memory {
