@@ -1274,12 +1274,15 @@
 	 * or USB come up still leaves its post-mortem readable by the shim on
 	 * the next boot (ABL never touches high RAM).
 	 */
-	ramoops: ramoops@bfff00000 {
+	/* Same geometry as the SukiSU GKI kernel's ramoops on this device
+	   (mem_address 0xa2000000, 4 MiB, console 2 MiB, pmsg 2 MiB) so a
+	   diagnostic crash is readable from Android via /sys/fs/pstore. */
+	ramoops: ramoops@a2000000 {
 		compatible = "ramoops";
-		reg = <0x0b 0xfff00000 0x0 0x100000>;
-		record-size = <0x20000>;
-		console-size = <0x80000>;
-		pmsg-size = <0x20000>;
+		reg = <0x0 0xa2000000 0x0 0x400000>;
+		record-size = <0x0>;
+		console-size = <0x200000>;
+		pmsg-size = <0x200000>;
 		no-map;
 	};
 };
