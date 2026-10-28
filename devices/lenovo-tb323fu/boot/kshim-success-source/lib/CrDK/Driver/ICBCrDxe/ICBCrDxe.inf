@@ -1,0 +1,38 @@
+## @file
+#  Adapter to the packaged Qualcomm NPA ICB owner.
+#
+#  SPDX-License-Identifier: MIT
+##
+
+[Defines]
+  INF_VERSION                    = 0x00010005
+  BASE_NAME                      = ICBCrDxe
+  FILE_GUID                      = 6e9f8d42-2b27-4d31-9e4d-1c8f2a7b6d50
+  MODULE_TYPE                    = DXE_DRIVER
+  VERSION_STRING                 = 1.0
+  ENTRY_POINT                    = InterconnectEntryPoint
+
+[Sources]
+  ICBCrDxe.c
+
+[Packages]
+  MdePkg/MdePkg.dec
+  CranePkg/CranePkg.dec
+
+[LibraryClasses]
+  BaseLib
+  BaseMemoryLib
+  CrDalLib
+  DebugLib
+  UefiBootServicesTableLib
+  UefiDriverEntryPoint
+  UefiLib
+
+[Protocols]
+  gEfiCrDalProtocolGuid         ## CONSUMES
+  gEfiNpaProtocolGuid           ## CONSUMES
+  gEfiICBProtocolGuid           ## CONSUMES
+  gEfiInterconnectCrProtocolGuid ## PRODUCES
+
+[Depex]
+  gEfiCrDalProtocolGuid AND gEfiNpaProtocolGuid AND gEfiICBProtocolGuid

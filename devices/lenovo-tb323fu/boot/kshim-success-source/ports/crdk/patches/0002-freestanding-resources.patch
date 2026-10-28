@@ -913,7 +913,7 @@ new file mode 100644
 index 0000000..be517cb
 --- /dev/null
 +++ b/Include/Library/cr_splash.h
-@@ -0,0 +1,30 @@
+@@ -0,0 +1,37 @@
 +/* SPDX-License-Identifier: MIT */
 +#pragma once
 +#include <Library/cr_geni.h>
@@ -932,6 +932,13 @@ index 0000000..be517cb
 +       DMA4/DMA5 (ids 8/9) live in CTL_LAYER_EXT4, which the legacy walk
 +       never reads, so they can never enter the discovered route. */
 +    bool dpu9_legacy;
++    /* DPU9: bit i set when scan field i changed across the stability
++       re-read (see scan_diff_bits); bit 4 is SRC0_ADDR. */
++    uint32_t dpu9_flap_bits;
++    /* DPU9: which semantic check rejected the walk (dpu9_note codes) and
++       the first routed pipe's snapshot words at rejection time. */
++    uint32_t dpu9_reject;
++    uint32_t dpu9_scan_dump[8];
 +    uint8_t mixer_id[8];
 +    uint32_t stage[11];
 +    unsigned stage_count;
@@ -2160,7 +2167,7 @@ new file mode 100644
 index 0000000..103ac0b
 --- /dev/null
 +++ b/Library/DisplayLib/splash.c
-@@ -0,0 +1,539 @@
+@@ -0,0 +1,683 @@
 +/* SPDX-License-Identifier: MIT */
 +#include <Library/cr_splash.h>
 +#include <oskal/cr_string.h>
@@ -2180,7 +2187,8 @@ index 0000000..103ac0b
 +        .rect = rd(r, io, base + 0x170)};
 +}
 +struct routing { unsigned mask; int mixer[10]; uint32_t out[10], op[10]; };
-+static int active_legacy(const struct CrSplashResources *r, const struct CrIo *io, struct routing *route)
++static int active_legacy(const struct CrSplashResources *r, const struct CrIo *io,
++                         struct routing *route, bool dpu9)
 +{
 +    static const unsigned shift[] = {0, 3, 6, 26, 18, 21};
 +    static const unsigned ext_shift[] = {0, 2, 4, 6, 16, 18};
@@ -2205,7 +2213,11 @@ index 0000000..103ac0b
 +                for (p = 0; p < r->pipe_count; ++p) if (r->pipe_id[p] == id) break;
 +                /* Reject an unlisted active pipe, overlapping composition,
 +                 * and a single pipe fanned out to multiple mixers. */
-+                if (p == r->pipe_count || route->mixer[p] >= 0 || (mixers & (1U << m)))
++                /* DPU9: several SSPP layers legitimately share one mixer in
++                 * the ABL splash composition, so only an unlisted active
++                 * pipe is rejected there; first-wins mixer assignment. */
++                if (p == r->pipe_count ||
++                    (!dpu9 && (route->mixer[p] >= 0 || (mixers & (1U << m)))))
 +                    return CR_BUS_UNSUPPORTED;
 +                route->mask |= 1U << p; mixers |= 1U << m;
 +                route->mixer[p] = m;
@@ -2613,6 +2625,42 @@ index 0000000..103ac0b
 +    *fb = out;
 +    return 0;
 +}
++/* DPU9 stability diagnostics: one bit per scan field that changed across
++   the re-read; bit 4 is SRC0_ADDR (frame-buffer cycling). */
++static uint32_t scan_diff_bits(const struct scan *a, const struct scan *b)
++{
++    uint32_t bits = 0;
++    if (a->src != b->src) bits |= 1u << 0;
++    if (a->xy != b->xy) bits |= 1u << 1;
++    if (a->out != b->out) bits |= 1u << 2;
++    if (a->out_xy != b->out_xy) bits |= 1u << 3;
++    if (a->addr != b->addr) bits |= 1u << 4;
++    if (a->stride != b->stride) bits |= 1u << 5;
++    if (a->format != b->format) bits |= 1u << 6;
++    if (a->unpack != b->unpack) bits |= 1u << 7;
++    if (a->op != b->op) bits |= 1u << 8;
++    if (a->secure != b->secure) bits |= 1u << 9;
++    if (a->rect != b->rect) bits |= 1u << 10;
++    return bits;
++}
++/* DPU9 rejection diagnostics: record the first semantic rejection with the
++   routed pipe's snapshot words. Codes: 1 route, 2 three pipes, 3 format,
++   4 src!=out, 5 src_y, 6 out_xy, 7 out mismatch, 8 secure, 9 rect1,
++   10 op bits, 11 solo op/xy, 12 dual composition, 13 width>stride. */
++static void dpu9_note(const struct CrSplashResources *r, unsigned code,
++                      const struct scan *s)
++{
++    struct CrSplashResources *w = (struct CrSplashResources *)(uintptr_t)r;
++    if (w->dpu9_reject == 0) {
++        w->dpu9_reject = code;
++        if (s) {
++            w->dpu9_scan_dump[0] = s->format; w->dpu9_scan_dump[1] = s->unpack;
++            w->dpu9_scan_dump[2] = s->src;    w->dpu9_scan_dump[3] = s->out;
++            w->dpu9_scan_dump[4] = s->xy;     w->dpu9_scan_dump[5] = s->op;
++            w->dpu9_scan_dump[6] = s->rect;   w->dpu9_scan_dump[7] = s->addr;
++        }
++    }
++}
 +int CrSplashRead(const struct CrSplashResources *r, const struct CrIo *io, struct CrSplash *fb)
 +{
 +    if (!r || !io || !io->read32 || !fb || !r->base || r->base > UINTPTR_MAX - r->size ||
@@ -2658,17 +2706,99 @@ index 0000000..103ac0b
 +    }
 +    if (r->lm_source_select) return read_rec(r, io, fb);
 +    struct routing route, again;
-+    if (active_legacy(r, io, &route) || !route.mask) return CR_BUS_UNSUPPORTED;
++    if (active_legacy(r, io, &route, dpu9) || !route.mask) {
++        if (dpu9) {
++            /* Dump the first live CTL's routing registers so the bootargs
++               report shows exactly which pipe bits the firmware set. */
++            struct CrSplashResources *w = (struct CrSplashResources *)(uintptr_t)r;
++            w->dpu9_reject = 1;
++            for (unsigned c = 0; c < r->ctl_count; ++c) {
++                if (rd(r, io, r->ctl[c] + 0xf4u)) {
++                    w->dpu9_scan_dump[0] = c;
++                    w->dpu9_scan_dump[1] = rd(r, io, r->ctl[c] + 0xf4u);
++                    w->dpu9_scan_dump[2] = rd(r, io, r->ctl[c]);
++                    w->dpu9_scan_dump[3] = rd(r, io, r->ctl[c] + 0x40u);
++                    w->dpu9_scan_dump[4] = rd(r, io, r->ctl[c] + 0x70u);
++                    w->dpu9_scan_dump[5] = rd(r, io, r->ctl[c] + 0xa0u);
++                    w->dpu9_scan_dump[6] = rd(r, io, r->ctl[c] + 0xb8u);
++                    w->dpu9_scan_dump[7] = rd(r, io, r->ctl[c] + 0x14u);
++                    break;
++                }
++            }
++        }
++        return CR_BUS_UNSUPPORTED;
++    }
 +    struct scan scans[2]; unsigned count = 0, pipe[2], bytes = 0;
 +    struct CrSplash part[2];
++    if (dpu9) {
++        /* SM8650 ABL composes the splash from several SSPP layers blended
++           on one layer mixer (measured: VIG0+VIG1+VIG3 on LM_0).  Instead
++           of rejecting that shape, evaluate every routed pipe and keep
++           the largest fully valid layer as the menu framebuffer; small
++           positioned overlay layers are skipped. */
++        struct CrSplash pick; struct scan pick_scan; unsigned pick_pipe = 0, pick_bpp = 0;
++        uint64_t pick_area = 0; int have = 0;
++        for (unsigned p = 0; p < r->pipe_count; ++p) {
++            if (!(route.mask & (1U << p))) continue;
++            struct scan s; struct CrSplash cand; unsigned bpp;
++            snapshot(r, io, p, &s);
++            if (format(&s, &cand.format, &bpp) || s.src != s.out ||
++                (s.xy >> 16) || s.out_xy || s.out != route.out[p] || s.secure ||
++                s.rect || (s.op & ~((1U << 31) | (1U << 4)))) continue;
++            cand.width = s.src & 0xffff; cand.height = s.src >> 16;
++            cand.stride = s.stride & 0xffff;
++            cand.address = (uint64_t)s.addr + (s.xy & 0xffff) * bpp;
++            if (!cand.width || !cand.height || cand.width > 8192 || cand.height > 8192 ||
++                cand.stride < ((s.xy & 0xffff) + cand.width) * bpp || (cand.address % bpp))
++                continue;
++            cand.size = (uint64_t)cand.stride * (cand.height - 1) + cand.width * bpp;
++            if (!within(r->reserved_base, r->reserved_size, cand.address, cand.size))
++                continue;
++            uint64_t area = (uint64_t)cand.width * cand.height;
++            if (!have || area > pick_area) {
++                have = 1; pick = cand; pick_scan = s; pick_pipe = p;
++                pick_bpp = bpp; pick_area = area;
++            }
++        }
++        if (!have) { dpu9_note(r, 15, NULL); return CR_BUS_UNSUPPORTED; }
++        if (pick_scan.xy) { dpu9_note(r, 11, &pick_scan); return CR_BUS_UNSUPPORTED; }
++        if (pick.width * pick_bpp > pick.stride) { dpu9_note(r, 13, &pick_scan); return CR_BUS_UNSUPPORTED; }
++        pick.size = (uint64_t)pick.stride * pick.height;
++        if (!within(r->reserved_base, r->reserved_size, pick.address, pick.size)) {
++            dpu9_note(r, 16, &pick_scan); return CR_BUS_UNSUPPORTED;
++        }
++        /* Stability: re-read only the chosen pipe; a frame-buffer address
++           change alone is tolerated (multi-buffered scanout). */
++        {
++            struct scan next; snapshot(r, io, pick_pipe, &next);
++            uint32_t bits = scan_diff_bits(&next, &pick_scan);
++            ((struct CrSplashResources *)(uintptr_t)r)->dpu9_flap_bits = bits;
++            if (bits & ~0x10u) return CR_BUS_AGAIN;
++        }
++        *fb = pick;
++        return 0;
++    }
 +    for (unsigned p = 0; p < r->pipe_count; ++p) {
 +        if (!(route.mask & (1U << p))) continue;
-+        if (count == 2) return CR_BUS_UNSUPPORTED;
++        if (count == 2) {
++            if (dpu9) dpu9_note(r, 2, NULL);
++            return CR_BUS_UNSUPPORTED;
++        }
 +        struct scan *s = &scans[count]; snapshot(r, io, p, s);
 +        unsigned bpp;
-+        if (format(s, &part[count].format, &bpp) || s->src != s->out ||
-+            (s->xy >> 16) || s->out_xy || s->out != route.out[p] || s->secure || s->rect ||
-+            (s->op & ~((1U << 31) | (1U << 4)))) return CR_BUS_UNSUPPORTED;
++        int bad = 0;
++        if (format(s, &part[count].format, &bpp)) bad = 3;
++        else if (s->src != s->out) bad = 4;
++        else if (s->xy >> 16) bad = 5;
++        else if (s->out_xy) bad = 6;
++        else if (s->out != route.out[p]) bad = 7;
++        else if (s->secure) bad = 8;
++        else if (s->rect) bad = 9;
++        else if (s->op & ~((1U << 31) | (1U << 4))) bad = 10;
++        if (bad) {
++            if (dpu9) dpu9_note(r, (unsigned)bad, s);
++            return CR_BUS_UNSUPPORTED;
++        }
 +        bytes = bpp; pipe[count] = p;
 +        part[count].width = s->src & 0xffff; part[count].height = s->src >> 16;
 +        part[count].stride = s->stride & 0xffff;
@@ -2679,7 +2809,10 @@ index 0000000..103ac0b
 +        if (!within(r->reserved_base, r->reserved_size, part[count].address, part[count].size)) return CR_BUS_INVALID;
 +        ++count;
 +    }
-+    if (count == 1 && (route.op[pipe[0]] || scans[0].xy)) return CR_BUS_UNSUPPORTED;
++    if (count == 1 && (route.op[pipe[0]] || scans[0].xy)) {
++        if (dpu9) dpu9_note(r, 11, &scans[0]);
++        return CR_BUS_UNSUPPORTED;
++    }
 +    if (count == 2) {
 +        if (route.op[pipe[0]] == route.op[pipe[1]]) return CR_BUS_UNSUPPORTED;
 +        unsigned left = route.op[pipe[0]] ? 1 : 0;
@@ -2689,14 +2822,32 @@ index 0000000..103ac0b
 +            part[0].stride != part[1].stride || part[0].format != part[1].format) return CR_BUS_UNSUPPORTED;
 +        part[0].width += part[1].width;
 +    }
-+    if (!count || part[0].width * bytes > part[0].stride) return CR_BUS_UNSUPPORTED;
++    if (!count || part[0].width * bytes > part[0].stride) {
++        if (dpu9) dpu9_note(r, 13, count ? &scans[0] : NULL);
++        return CR_BUS_UNSUPPORTED;
++    }
 +    part[0].size = (uint64_t)part[0].stride * part[0].height;
 +    if (!within(r->reserved_base, r->reserved_size, part[0].address, part[0].size)) return CR_BUS_INVALID;
++    uint32_t flap_bits = 0;
 +    for (unsigned i = 0; i < count; ++i) {
 +        struct scan next; snapshot(r, io, pipe[i], &next);
-+        if (cr_memcmp(&next, &scans[i], sizeof(next))) return CR_BUS_AGAIN;
++        if (cr_memcmp(&next, &scans[i], sizeof(next))) {
++            if (!dpu9) return CR_BUS_AGAIN;
++            flap_bits |= scan_diff_bits(&next, &scans[i]);
++        }
 +    }
-+    if (active_legacy(r, io, &again) || cr_memcmp(&again, &route, sizeof(route))) return CR_BUS_AGAIN;
++    /* DPU9: the splash may cycle frame buffers (SRC0_ADDR per frame); only
++       fields beyond the address make the walk unstable. */
++    if (dpu9 && (flap_bits & ~0x10u)) {
++        ((struct CrSplashResources *)(uintptr_t)r)->dpu9_flap_bits = flap_bits;
++        return CR_BUS_AGAIN;
++    }
++    if (active_legacy(r, io, &again, dpu9) || cr_memcmp(&again, &route, sizeof(route))) {
++        if (dpu9) ((struct CrSplashResources *)(uintptr_t)r)->dpu9_flap_bits =
++            flap_bits | (1u << 11);
++        return CR_BUS_AGAIN;
++    }
++    if (dpu9) ((struct CrSplashResources *)(uintptr_t)r)->dpu9_flap_bits = flap_bits;
 +    *fb = part[0];
 +    return 0;
 +}

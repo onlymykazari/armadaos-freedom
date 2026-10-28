@@ -335,6 +335,25 @@ static void prepare_boot(void)
     }
 }
 
+
+#if KSHIM_BOOTARG_TRACE
+/* Raw stage marker: two bytes at the tail of the SukiSU ramoops hardware
+ * zone (0xa23ff000). pstore never touches past its declared sizes, so the
+ * bytes survive forced power-off and are readable from Android with:
+ *   su -c 'dd if=/dev/mem bs=4096 skip=$((0xa23ff0)) count=1 2>/dev/null'
+ * (or via /dev/kmem accessors). Bytes: [30]=stage1 [31]=stage2. */
+static void tbx_stage(char a, char b)
+{
+    if (kshim_mmu_add_region(0xa23ff000ull, 0x1000ull,
+                             KSHIM_MMU_NORMAL_NC,
+                             KSHIM_MMU_READ | KSHIM_MMU_WRITE) != 0)
+        return;
+    volatile uint8_t *m = (volatile uint8_t *)(uintptr_t)0xa23ff000ull;
+    m[0] = (uint8_t)a;
+    m[1] = (uint8_t)b;
+}
+#endif
+
 int kshim_main(
     uint64_t device_tree_address,
     uint64_t kernel_arg1,
@@ -701,8 +720,10 @@ int kshim_main(
             arm64_boot_linux(linux_base, device_tree_address, 4);
         }
 
+        tbx_stage('S', '0');
         uint32_t selected_index = select_image(&view, device_tree_address, linux_base,
                                                &device_info);
+        tbx_stage('S', '1');
         kshim_boot_metrics_record_once(KSHIM_BOOT_STAGE_HANDOFF);
         const MANIFEST_ENTRY *entry = view.entries[selected_index];
         if ((entry->flags & MF_ENTRY_FLAG_BASE_IMAGE) &&
@@ -722,8 +743,10 @@ int kshim_main(
              * DTB keep the original bootloader DT pointer. */
             int status = memory_status;
             const char *handoff_stage = "capture";
+            tbx_stage('H', '0');
             if (status == 0) {
                 handoff_stage = "memory";
+                tbx_stage('M', 'E');
                 status = dt_memory_apply(
                     RuntimeMemorySnapshot,
                     sizeof(RuntimeMemorySnapshot),
@@ -1188,11 +1211,15 @@ int kshim_main(
                     (void)dt_probe_report((void *)runtime_fdt, probe_report);
             }
 #endif
+            (void)dt_probe_report_slot((void *)runtime_fdt, 5, "jump");
+            tbx_stage('J', 'P');
             printf("Booting ");
             print_entry_name(entry);
             printf(" at 0x%lx with DTB at 0x%lx\n",
                    linux_base + entry->offset, selected_device_tree);
+            tbx_stage('P', 'B');
             prepare_boot();
+            (void)dt_probe_report_slot((void *)runtime_fdt, 6, "pb");
             arm64_boot_linux(linux_base + entry->offset,
                              selected_device_tree, entry_offset);
         }

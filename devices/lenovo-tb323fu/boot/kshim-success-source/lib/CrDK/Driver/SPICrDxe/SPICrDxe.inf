@@ -1,0 +1,33 @@
+[Defines]
+  INF_VERSION                    = 0x00010005
+  BASE_NAME                      = SPICrDxe
+  FILE_GUID                      = 2e8f1d4b-7c53-4c2a-a691-0db5e76f3a48
+  MODULE_TYPE                    = DXE_DRIVER
+  VERSION_STRING                 = 1.0
+  ENTRY_POINT                    = SpiCrEntryPoint
+
+[Sources]
+  SPICrDxe.c
+
+[Packages]
+  MdePkg/MdePkg.dec
+  CranePkg/CranePkg.dec
+
+[LibraryClasses]
+  BaseMemoryLib
+  MemoryAllocationLib
+  SynchronizationLib
+  UefiBootServicesTableLib
+  UefiDriverEntryPoint
+
+[Protocols]
+  gEfiSpiHcProtocolGuid         ## CONSUMES (optional PI backend)
+  gQcomSPIProtocolGuid          ## CONSUMES (MU SPIDxe)
+  gEfiQupCrProtocolGuid         ## CONSUMES
+  gEfiGpiCrProtocolGuid         ## CONSUMES
+  gEfiInterconnectCrProtocolGuid ## CONSUMES
+  gEfiSpiCrProtocolGuid         ## PRODUCES
+
+[Depex]
+  ( gQcomSPIProtocolGuid OR gEfiSpiHcProtocolGuid ) AND gEfiQupCrProtocolGuid AND
+  gEfiGpiCrProtocolGuid AND gEfiInterconnectCrProtocolGuid

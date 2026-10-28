@@ -1,0 +1,28 @@
+[Defines]
+  INF_VERSION                    = 0x00010005
+  BASE_NAME                      = GpiCrDxe
+  FILE_GUID                      = c18bf95b-1a4c-4d65-8d1a-3f70b5e6a2c9
+  MODULE_TYPE                    = DXE_DRIVER
+  VERSION_STRING                 = 1.0
+  ENTRY_POINT                    = GpiCrEntryPoint
+
+[Sources]
+  GpiCrDxe.c
+
+[Packages]
+  MdePkg/MdePkg.dec
+  CranePkg/CranePkg.dec
+
+[LibraryClasses]
+  CrDalLib
+  UefiBootServicesTableLib
+  UefiDriverEntryPoint
+
+[Protocols]
+  gEfiCrDalProtocolGuid ## CONSUMES
+  gQcomGpiInitProtocolGuid ## CONSUMES (MU GpiDxe)
+  gEfiQupCrProtocolGuid ## CONSUMES
+  gEfiGpiCrProtocolGuid ## PRODUCES
+
+[Depex]
+  gEfiCrDalProtocolGuid AND gQcomGpiInitProtocolGuid AND gEfiQupCrProtocolGuid
