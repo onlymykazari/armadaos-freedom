@@ -171,11 +171,13 @@ CONFIG_PSTORE_RAM=y
 # on i2c8 must come up or the panel stays dark even with a working fb0
 # (measured: simpledrm fb0 registered, screen black).
 CONFIG_BACKLIGHT_KTZ8866=y
-# Diagnostic payload: keep the simpledrm framebuffer for the whole session.
-# Hardware evidence: with DRM_MSM enabled the boot shows one fbcon frame and
-# then goes dark (MSM DPU probe takes over the scanout and the panel init
-# fails), hiding the report; the text diagnostic needs no MSM display.
-# CONFIG_DRM_MSM is not set
+# Display: enable the full MSM/DSI/panel/backlight chain. Earlier evidence
+# blamed MSM for taking over the scanout, but that test ran with multiple
+# other blockers (validate hang, missing ptn3222, missing backlight). The
+# user successfully booted full Armada (Linux, msm_drm-based) single-boot
+# on this very device on 2026-10-27 - the display chain works on Linux
+# here. Keep simpledrm as fallback until msm_drm takes over.
+CONFIG_DRM_MSM=y
 
 # ---- Misc large subsystems the diagnostic payload does not need ----
 # CONFIG_MEDIA_SUPPORT is not set
