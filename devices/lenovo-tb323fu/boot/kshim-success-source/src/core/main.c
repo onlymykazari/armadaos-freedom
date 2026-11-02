@@ -352,6 +352,14 @@ static void tbx_stage(char a, char b)
     m[0] = (uint8_t)a;
     m[1] = (uint8_t)b;
 }
+#else
+/* Call sites stay unconditional; with the trace off the stage marker is a
+ * no-op so the boot flow text does not grow preprocessor noise. */
+static inline void tbx_stage(char a, char b)
+{
+    (void)a;
+    (void)b;
+}
 #endif
 
 int kshim_main(
