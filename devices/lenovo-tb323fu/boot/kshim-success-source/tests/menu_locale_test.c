@@ -156,7 +156,8 @@ static void check_role_values(void)
     assert(KSHIM_MENU_ROLE_DEVICE_AUTO == 20);
     assert(KSHIM_MENU_ROLE_DEVICE_TB322FC == 21);
     assert(KSHIM_MENU_ROLE_DEVICE_TB323FU == 22);
-    assert(KSHIM_MENU_ROLE_MAX == KSHIM_MENU_ROLE_DEVICE_TB323FU);
+    assert(KSHIM_MENU_ROLE_DEVICE_TB321FU == 23);
+    assert(KSHIM_MENU_ROLE_MAX == KSHIM_MENU_ROLE_DEVICE_TB321FU);
 }
 
 /* The changed/added session-settings strings are non-empty in both languages

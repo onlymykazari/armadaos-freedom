@@ -2,6 +2,35 @@
 #include <qcom_dt.h>
 #include <Library/cr_splash.h>
 #include <string.h>
+#include <stdint.h>
+
+/* timer.h pulls arch sysreg headers that do not build freestanding here;
+   delay() itself is a plain C function in the timer object. */
+extern uint64_t delay(uint64_t micro_seconds);
+
+/* Bitmask of DPU9 scan fields that changed across the last stability
+   re-read (bit 4 = SRC0_ADDR); zero unless the walk measured a flap. */
+static uint32_t g_kshim_dt_splash_flap_bits;
+
+/* DPU9 semantic-rejection diagnostics from the last kshim_dt_splash walk:
+   the dpu9_note rejection code and the routed pipe's snapshot words. */
+static uint32_t g_kshim_dt_splash_reject;
+static uint32_t g_kshim_dt_splash_dump[8];
+
+uint32_t kshim_dt_splash_flap_bits(void)
+{
+    return g_kshim_dt_splash_flap_bits;
+}
+
+uint32_t kshim_dt_splash_reject(void)
+{
+    return g_kshim_dt_splash_reject;
+}
+
+uint32_t kshim_dt_splash_dump(unsigned index)
+{
+    return index < 8 ? g_kshim_dt_splash_dump[index] : 0;
+}
 #if KSHIM_DIAGNOSTIC_RESOURCES_ONLY
 #include <stdio.h>
 static struct kshim_splash_trace g_kshim_splash_trace;
@@ -225,6 +254,11 @@ int kshim_dt_splash(const void *f, const struct CrIo *io,
     int root_compatible_count = fdt_stringlist_count(f, 0, "compatible");
     bool root_has_sunp = root_compatible_count > 0 &&
         fdt_stringlist_search(f, 0, "compatible", "qcom,sunp") >= 0;
+    /* The DPU9 path is positively identified by an exact "qcom,kirby" root
+       entry (the measured TB321FU stock profile); it is never inferred from a
+       generic SoC marker, a missing version, or a non-matching shape. */
+    bool dpu9_root = root_compatible_count > 0 &&
+        fdt_stringlist_search(f, 0, "compatible", "qcom,kirby") >= 0;
 #if KSHIM_DIAGNOSTIC_RESOURCES_ONLY
     g_kshim_splash_trace.root_compatible_count = root_compatible_count;
     g_kshim_splash_trace.root_has_sunp = root_has_sunp;
@@ -273,6 +307,11 @@ int kshim_dt_splash(const void *f, const struct CrIo *io,
         version = fdt32_to_cpu(vprop[0]);
     }
     bool version_present = vprop != NULL;
+    /* SM8650 DPU9: the measured Kirby stock DT carries no qcom,sde-hw-version
+       and the exact "qcom,kirby" root. It keeps the legacy (pre-DPU12)
+       register layout for CrSplashRead while needing the extended DPU9
+       capacities and dummy-slot mixer parsing below. */
+    bool dpu9 = dpu9_root && !version_present;
     /* An exact Sun root must not carry a present version other than 0xc0000000;
        never mask that conflict by falling back. */
     if (version_present && version != 0xc0000000u && sun_root) return -1;
@@ -287,7 +326,9 @@ int kshim_dt_splash(const void *f, const struct CrIo *io,
     bool lm_source_select = sun || canoe;
     resources.lm_source_select = lm_source_select;
     resources.sspp_rec_separated = canoe;
-    int pipes = offsets(f, sde, "qcom,sde-sspp-off", resources.pipe, lm_source_select ? 10 : 8);
+    resources.dpu9_legacy = dpu9;
+    int pipes = offsets(f, sde, "qcom,sde-sspp-off", resources.pipe,
+                        (lm_source_select || dpu9) ? 10 : 8);
     int ctls = offsets(f, sde, "qcom,sde-ctl-off", resources.ctl, 8);
 #if KSHIM_DIAGNOSTIC_RESOURCES_ONLY
     /* Stage 6: mixer offset parsing/compaction. */
@@ -295,7 +336,7 @@ int kshim_dt_splash(const void *f, const struct CrIo *io,
 #endif
     int count, raw_n = 0;
     uint32_t raw[12];
-    if (lm_source_select) {
+    if (lm_source_select || dpu9) {
         raw_n = offsets(f, sde, "qcom,sde-mixer-off", raw, 12);
         if (raw_n < 1) return -1;
         count = 0;
@@ -333,7 +374,7 @@ int kshim_dt_splash(const void *f, const struct CrIo *io,
     /* Stage 9: SSPP type table. */
     g_kshim_splash_trace.dt_stage = 9;
 #endif
-    unsigned vig = 0, dma = 0, dma_max = lm_source_select ? 6 : 4;
+    unsigned vig = 0, dma = 0, dma_max = (lm_source_select || dpu9) ? 6 : 4;
     int types = fdt_stringlist_count(f, sde, "qcom,sde-sspp-type");
     for (int i = 0; i < pipes; ++i) {
         int len;
@@ -360,21 +401,46 @@ int kshim_dt_splash(const void *f, const struct CrIo *io,
         for (int i = 8; i < 12; ++i)
             if (raw[i] != 0 && raw[i] != 0xf0f) return -1;
     }
-    struct CrSplash scanout;
-#if KSHIM_DIAGNOSTIC_RESOURCES_ONLY
-    /* Stage 11: CrSplashRead. */
-    g_kshim_splash_trace.dt_stage = 11;
-    int status;
-    if (io && io->read32) {
-        struct kshim_splash_trace_ctx ctx = {.io = io, .base = (uintptr_t)resources.base};
-        const struct CrIo proxy = {.context = &ctx, .read32 = trace_read32};
-        status = CrSplashRead(&resources, &proxy, &scanout);
-    } else {
-        status = CrSplashRead(&resources, io, &scanout);
+    if (dpu9) {
+        /* Fingerprint only the measured Kirby (SM8650, DPU9) shape: 10 pipes,
+           6 CTLs, 10 raw mixer slots with the first 6 valid and the last 4
+           dummy, 6 effective mixers, and exactly 4 VIG + 6 DMA type strings
+           with no trailing extras. Any other layout stays unprobed. */
+        if (pipes != 10 || ctls != 6 || count != 6 ||
+            types != 10 || vig != 4 || dma != 6 || raw_n != 10) return -1;
+        for (int i = 0; i < 6; ++i)
+            if (resources.mixer_id[i] != (uint8_t)i) return -1;
+        for (int i = 6; i < 10; ++i)
+            if (raw[i] != 0 && raw[i] != 0xf0f) return -1;
     }
+    struct CrSplash scanout;
+    /* DPU9 (SM8650 Kirby) measures CR_BUS_AGAIN when the display core is
+       micro-idling behind the splash: two back-to-back walks can observe
+       different register snapshots. Retry a bounded number of times with a
+       short delay so a transient flap converges; any other status is final. */
+    int status = -1;
+    for (unsigned attempt = 0; attempt < 3; ++attempt) {
+#if KSHIM_DIAGNOSTIC_RESOURCES_ONLY
+        if (attempt == 0) g_kshim_splash_trace.dt_stage = 11;
+        if (io && io->read32) {
+            struct kshim_splash_trace_ctx ctx = {.io = io, .base = (uintptr_t)resources.base};
+            const struct CrIo proxy = {.context = &ctx, .read32 = trace_read32};
+            status = CrSplashRead(&resources, &proxy, &scanout);
+        } else {
+            status = CrSplashRead(&resources, io, &scanout);
+        }
 #else
-    int status = CrSplashRead(&resources, io, &scanout);
+        status = CrSplashRead(&resources, io, &scanout);
 #endif
+        if (status != -95) break;
+        (void)delay(2000);
+    }
+    /* DPU9 diagnostic: which scan fields flapped (bit 4 = SRC0_ADDR),
+       exported for the bootargs milestone probe; recorded on every exit. */
+    g_kshim_dt_splash_flap_bits = resources.dpu9_flap_bits;
+    g_kshim_dt_splash_reject = resources.dpu9_reject;
+    for (unsigned i = 0; i < 8; ++i)
+        g_kshim_dt_splash_dump[i] = resources.dpu9_scan_dump[i];
 #if KSHIM_DIAGNOSTIC_RESOURCES_ONLY
     if (io && io->read32 && status == -95 &&
         g_kshim_splash_trace.count == 15 &&

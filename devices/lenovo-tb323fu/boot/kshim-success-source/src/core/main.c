@@ -335,6 +335,25 @@ static void prepare_boot(void)
     }
 }
 
+
+#if KSHIM_BOOTARG_TRACE
+/* Raw stage marker: two bytes at the tail of the SukiSU ramoops hardware
+ * zone (0xa23ff000). pstore never touches past its declared sizes, so the
+ * bytes survive forced power-off and are readable from Android with:
+ *   su -c 'dd if=/dev/mem bs=4096 skip=$((0xa23ff0)) count=1 2>/dev/null'
+ * (or via /dev/kmem accessors). Bytes: [30]=stage1 [31]=stage2. */
+static void tbx_stage(char a, char b)
+{
+    if (kshim_mmu_add_region(0xa23ff000ull, 0x1000ull,
+                             KSHIM_MMU_NORMAL_NC,
+                             KSHIM_MMU_READ | KSHIM_MMU_WRITE) != 0)
+        return;
+    volatile uint8_t *m = (volatile uint8_t *)(uintptr_t)0xa23ff000ull;
+    m[0] = (uint8_t)a;
+    m[1] = (uint8_t)b;
+}
+#endif
+
 int kshim_main(
     uint64_t device_tree_address,
     uint64_t kernel_arg1,
@@ -673,6 +692,25 @@ int kshim_main(
         if (runtime_fdt)
             (void)dt_diagnostic_report_slots((void *)runtime_fdt, "pending",
                                              "pending");
+#if KSHIM_BOOTARG_TRACE
+        /* Milestone probe: s0 filled immediately after prefix activation and
+         * before the menu, carrying the already-completed resource-probe
+         * results (splash / SPMI status). This site precedes every risky
+         * path, so a still-pending slot here isolates a transport failure. */
+        if (runtime_fdt) {
+            const struct kshim_resources *trace_resources = kshim_resources_get();
+            char s0_report[81];
+            int ns = snprintf(s0_report, sizeof(s0_report),
+                              "res1:r=%d,%x,%x,%x,%x,%x,%x,%x",
+                              kshim_dt_splash_reject(),
+                              kshim_dt_splash_dump(0), kshim_dt_splash_dump(1),
+                              kshim_dt_splash_dump(2), kshim_dt_splash_dump(3),
+                              kshim_dt_splash_dump(4), kshim_dt_splash_dump(5),
+                              kshim_dt_splash_dump(6));
+            if (ns > 0 && ns < (int)sizeof(s0_report))
+                (void)dt_probe_report_slot((void *)runtime_fdt, 0, s0_report);
+        }
+#endif
         MANIFEST_VIEW view = {0};
         if (!get_manifest(
                 linux_base, manifest_address, manifest_size, &view)) {
@@ -682,8 +720,10 @@ int kshim_main(
             arm64_boot_linux(linux_base, device_tree_address, 4);
         }
 
+        tbx_stage('S', '0');
         uint32_t selected_index = select_image(&view, device_tree_address, linux_base,
                                                &device_info);
+        tbx_stage('S', '1');
         kshim_boot_metrics_record_once(KSHIM_BOOT_STAGE_HANDOFF);
         const MANIFEST_ENTRY *entry = view.entries[selected_index];
         if ((entry->flags & MF_ENTRY_FLAG_BASE_IMAGE) &&
@@ -703,8 +743,10 @@ int kshim_main(
              * DTB keep the original bootloader DT pointer. */
             int status = memory_status;
             const char *handoff_stage = "capture";
+            tbx_stage('H', '0');
             if (status == 0) {
                 handoff_stage = "memory";
+                tbx_stage('M', 'E');
                 status = dt_memory_apply(
                     RuntimeMemorySnapshot,
                     sizeof(RuntimeMemorySnapshot),
@@ -1112,6 +1154,23 @@ int kshim_main(
                                  dt_handoff_failure_detail());
                 if (n > 0 && n < (int)sizeof(report))
                     dt_probe_report((void *)runtime_fdt, report);
+#if KSHIM_BOOTARG_TRACE
+                /* Fallback-path trace probe: single-slot write-once fill
+                 * carrying the failing handoff stage and splash status. */
+                {
+                    const struct kshim_resources *trace_resources =
+                        kshim_resources_get();
+                    char probe_report[81];
+                    int np = snprintf(probe_report, sizeof(probe_report),
+                                      "r14:s=%d:st=%s:a=%d",
+                                      trace_resources
+                                          ? trace_resources->splash_status : -99,
+                                      handoff_stage, status);
+                    if (np > 0 && np < (int)sizeof(probe_report))
+                        (void)dt_probe_report((void *)runtime_fdt,
+                                              probe_report);
+                }
+#endif
                 printf("Memory handoff failed; booting base image\n");
                 prepare_boot();
                 arm64_boot_linux(linux_base, device_tree_address, 4);
@@ -1139,11 +1198,28 @@ int kshim_main(
         if (entry->type == MF_ENTRY_TYPE_LINUX) {
             uint64_t entry_offset = entry->flags & MF_ENTRY_FLAG_BASE_IMAGE
                 ? 4 : entry->entry_offset;
+#if KSHIM_BOOTARG_TRACE
+            /* Success-path trace probe: single-slot write-once fill with the
+             * splash probe status right before the proven handoff. */
+            {
+                const struct kshim_resources *trace_resources = kshim_resources_get();
+                char probe_report[81];
+                int np = snprintf(probe_report, sizeof(probe_report),
+                                  "r14:s=%d:st=hd",
+                                  trace_resources ? trace_resources->splash_status : -99);
+                if (np > 0 && np < (int)sizeof(probe_report))
+                    (void)dt_probe_report((void *)runtime_fdt, probe_report);
+            }
+#endif
+            (void)dt_probe_report_slot((void *)runtime_fdt, 5, "jump");
+            tbx_stage('J', 'P');
             printf("Booting ");
             print_entry_name(entry);
             printf(" at 0x%lx with DTB at 0x%lx\n",
                    linux_base + entry->offset, selected_device_tree);
+            tbx_stage('P', 'B');
             prepare_boot();
+            (void)dt_probe_report_slot((void *)runtime_fdt, 6, "pb");
             arm64_boot_linux(linux_base + entry->offset,
                              selected_device_tree, entry_offset);
         }

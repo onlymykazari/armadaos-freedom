@@ -25,6 +25,11 @@
  *     "qcom,sm8750" (the trusted Linux TB322FC reference), or the alternate
  *     strict stock fingerprint described below.
  *   - DEVICE_BOARD_TB323FU: exact "lenovo,tb323fu" or exact "lenovo,baldur".
+ *   - DEVICE_BOARD_TB321FU: exact "lenovo,tb321fu", or the alternate strict
+ *     stock fingerprint: an exact "qcom,kirby" root without SM8750/SM8850
+ *     family markers plus the measured Kirby NT36523 active-panel reference
+ *     (BOE "dsi_kirby_nt36523_boe_dsc_vid" or CSOT
+ *     "dsi_kirby_nt36523_csot_dsc_vid" variant).
  *   - "qcom,canoep" alone is a SoC marker, not a board identity.
  * Conflicting board evidence leave the board UNKNOWN; unrelated
  * devices that share a SoC keep the board UNKNOWN.
@@ -42,7 +47,8 @@
  *   - DEVICE_SOC_SM8750: "qcom,sun", "qcom,sunp" or "qcom,sm8750".
  *   - DEVICE_SOC_SM8850: "qcom,canoe", "qcom,canoep", "qcom,kaanapali" or
  *     "qcom,sm8850".
- * Entries from both groups leave the SoC UNKNOWN.
+ *   - DEVICE_SOC_SM8650: "qcom,kirby" or "qcom,sm8650".
+ * Entries from more than one group leave the SoC UNKNOWN.
  *
  * The compatible field preserves the original root compatible list verbatim
  * as a NUL-separated list: whole entries are copied while they fit and
@@ -68,12 +74,14 @@ enum device_board {
     DEVICE_BOARD_UNKNOWN = 0,
     DEVICE_BOARD_TB322FC,
     DEVICE_BOARD_TB323FU,
+    DEVICE_BOARD_TB321FU,
 };
 
 enum device_soc {
     DEVICE_SOC_UNKNOWN = 0,
     DEVICE_SOC_SM8750,
     DEVICE_SOC_SM8850,
+    DEVICE_SOC_SM8650,
 };
 
 struct device_info {
