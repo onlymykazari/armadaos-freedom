@@ -35,7 +35,15 @@ BASH = "/bin/bash"
 LOCK_PATH = "/run/armada-bootimg.lock"
 LOCK_WAIT_SECONDS = 5.0
 COMPATIBLE_PATH = "/sys/firmware/devicetree/base/compatible"
-REQUIRED_COMPATIBLE = ("lenovo,elden", "qcom,sm8750")
+# Known Linux board pairings; the running FDT must carry every entry of one
+# pair. ("lenovo,elden", "qcom,sm8750") is the Gen4 reference,
+# ("lenovo,tb321fu", "qcom,sm8650") the TB321FU (kirby) pairing from the
+# vendored sm8650-lenovo-tb321fu.dts, matching kshim-build-boot.py's
+# accepted set.
+REQUIRED_COMPATIBLE_SETS = (
+    ("lenovo,elden", "qcom,sm8750"),
+    ("lenovo,tb321fu", "qcom,sm8650"),
+)
 TOOL_FILES = {
     "packer": "MultiBootKernelPatcher",
     "unpacker": "UnpackTool",
@@ -99,10 +107,11 @@ def check_profile(path=COMPATIBLE_PATH):
         raise SyncError("device profile unreadable: %s: %s" % (path, error))
     values = [part.decode("ascii", "replace")
               for part in raw.split(b"\0") if part]
-    missing = [value for value in REQUIRED_COMPATIBLE if value not in values]
-    need(not missing,
-         "device profile is not Elden/SM8750; FDT compatible is missing %s"
-         % ", ".join(missing))
+    matched = [pair for pair in REQUIRED_COMPATIBLE_SETS
+               if all(value in values for value in pair)]
+    need(bool(matched),
+         "device profile is not a supported board (Elden/SM8750 or "
+         "TB321FU/SM8650); FDT compatible is %s" % ", ".join(values))
 
 
 def read_native_status():

@@ -41,6 +41,7 @@ case "$model" in
     "Retroid Pocket Nova") profile=retroid-pocket-nova ;;
     "Lenovo Legion Tab Y700 5th Gen"|"Lenovo Legion Y700 Gen 5 (TB323FU)"|"Lenovo Legion Tab Y700 (TB323FU)") profile=lenovo-tb323fu ;;
     "Lenovo Legion Y700 Gen4") profile=lenovo-tb322fc ;;
+    "Lenovo Legion Tab Y700 (2025) / TB321FU"|"Lenovo Legion Y700 2025") profile=lenovo-tb321fu ;;
     *) profile= ;;
 esac
 
@@ -52,6 +53,10 @@ if [[ -z "${ARMADA_MODEL:-}" && -r "$dt_root/compatible" ]]; then
     while IFS= read -r -d '' entry || [[ -n "$entry" ]]; do
         if [[ "$entry" == "lenovo,elden" ]]; then
             profile=lenovo-tb322fc
+            break
+        fi
+        if [[ "$entry" == "lenovo,tb321fu" ]]; then
+            profile=lenovo-tb321fu
             break
         fi
     done <"$dt_root/compatible"

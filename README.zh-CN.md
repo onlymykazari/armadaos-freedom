@@ -59,6 +59,7 @@ ArmadaOS Freedom 是基于 [ArmadaOS](https://github.com/armada-os/armada)、由
 |---|---|---|---|
 | 联想拯救者 Y700 四代 | TB322FC / SM8750 | [四代设备文档](devices/lenovo-tb322fc/README.md) | [四代已知问题](devices/lenovo-tb322fc/README.md#已知问题与待完成项) |
 | 联想拯救者 Y700 五代 | TB323FU / SM8850P | [五代设备文档](devices/lenovo-tb323fu/README.md) | [五代已知问题](devices/lenovo-tb323fu/README.md#已知限制) |
+| 联想拯救者 Y700 三代（2025） | TB321FU / SM8650 | [三代设备文档](devices/lenovo-tb321fu/README.md) | [三代引导构建](devices/lenovo-tb321fu/boot/README.md) |
 
 两代的启动镜像仍需匹配各自设备，不能直接互刷。
 

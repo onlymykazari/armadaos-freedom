@@ -68,6 +68,7 @@ Current device work covers Lenovo Legion Y700 Gen 4 and Gen 5. Both share a Linu
 |---|---|---|---|
 | Lenovo Legion Y700 Gen 4 | TB322FC / SM8750 | [Gen 4 documentation](devices/lenovo-tb322fc/README.md) | [Gen 4 known issues](devices/lenovo-tb322fc/README.md#已知问题与待完成项) |
 | Lenovo Legion Tab Gen 5 / Y700 Gen 5 | TB323FU / SM8850P | [Gen 5 documentation](devices/lenovo-tb323fu/README.md) | [Gen 5 known issues](devices/lenovo-tb323fu/README.md#已知限制) |
+| Lenovo Legion Tab Gen 3 / Y700 (2025) | TB321FU / SM8650 | [Gen 3 documentation](devices/lenovo-tb321fu/README.md) | [Gen 3 boot build](devices/lenovo-tb321fu/boot/README.md) |
 
 Boot images remain model-specific and must not be cross-flashed.
 
