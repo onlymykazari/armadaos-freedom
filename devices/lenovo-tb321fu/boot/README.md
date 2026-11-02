@@ -130,5 +130,6 @@ fastboot reboot
   `su -c 'dd if=/dev/mem bs=4096 skip=$((0xa23ff0)) count=1 2>/dev/null'`。
 - 诊断 payload 的内核用 `packages/kernel/config/tb321fu-diag.config.fragment`
   （`KCONFIG_OVERRIDES=<该文件> KCONFIG_RELAXED=1 packages/kernel/scripts/build-kernel.sh`）：
-  裁掉 DRM_MSM 用 simplefb 直读 splash，ramoops 落在 0xa2000000，可与
-  Android 的 /sys/fs/pstore 互读。
+  裁掉媒体/网络文件系统/BPF 等大块以压 Image 体积，但**保留完整 MSM 显示链**
+  （KTZ8866 背光 + msm/DSI，simpledrm 作为接管前兜底），ramoops 落在
+  0xa2000000，可与 Android 的 /sys/fs/pstore 互读。
