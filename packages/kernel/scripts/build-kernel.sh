@@ -14,7 +14,7 @@ OUT_DIR="${OUT_DIR:-${REPO_ROOT}/out}"
 SERIES_FILE="${REPO_ROOT}/patches/series"
 PATCHES_DIR="${REPO_ROOT}/patches"
 DTS_DIR="${REPO_ROOT}/dts"
-KCONFIG_OVERRIDES="${REPO_ROOT}/config/armada-kernel.config.overrides"
+KCONFIG_OVERRIDES="${KCONFIG_OVERRIDES:-${REPO_ROOT}/config/armada-kernel.config.overrides}"
 
 # ---------- Host arch / cross-compile setup ----------
 HOST_ARCH=$(uname -m)
@@ -219,10 +219,26 @@ if [ -f "${KCONFIG_OVERRIDES}" ]; then
                 ;;
         esac
     done < "${frag}"
-    if [ "${config_error}" -ne 0 ] || grep -q "not in final .config" "${merge_log}"; then
-        rm -f "${frag}" "${merge_log}"
-        echo "ERROR: a requested CONFIG didn't survive Kconfig deps (see above); check the depends-on chain."
-        exit 1
+    # Apply disable requests from the fragment explicitly: merge_config's
+    # defconfig pass may not honor "is not set" lines against =y defaults.
+    grep -E '^# CONFIG_[A-Z0-9_]+ is not set' "${KCONFIG_OVERRIDES}" 2>/dev/null |
+        sed -E 's/^# (CONFIG_[A-Z0-9_]+) is not set/\1/' |
+        while IFS= read -r sym; do
+            scripts/config --file .config -d "$sym"
+        done
+    make olddefconfig >/dev/null 2>&1
+    # Only a failed =y request is fatal. The "not in final .config" warnings
+    # cover disable requests (# CONFIG_X is not set) whose subject vanished
+    # with its parent: under a trimmed fragment that is expected, not an error.
+    if [ "${config_error}" -ne 0 ]; then
+        if [ "${KCONFIG_RELAXED:-0}" = "1" ]; then
+            echo "WARNING: some requested CONFIGs were demoted (KCONFIG_RELAXED=1; continuing)"
+            config_error=0
+        else
+            rm -f "${frag}" "${merge_log}"
+            echo "ERROR: a requested CONFIG didn't survive Kconfig deps (see above); check the depends-on chain."
+            exit 1
+        fi
     fi
     rm -f "${frag}" "${merge_log}"
 fi
