@@ -1,0 +1,37 @@
+From: enij90 <226572015+enij90@users.noreply.github.com>
+Subject: [PATCH] drm/msm/dpu: TB321FU DSC width rounding
+
+From GUF296's TB321FU-7.1.1 tree: round the DSC-compressed timing width up
+instead of truncating.
+
+The companion GUF change that skipped the first primary SSPP programming
+after a display resume is dropped: on 7.2 the SSPP registers are zero after
+the DPU power-collapses, so skipping that commit makes the pipe fetch from
+IOVA 0, the corrupted DSC stream desyncs the panel decoder and the whole
+screen shows noise until the panel is re-initialised.
+
+From: enij90 <226572015+enij90@users.noreply.github.com>
+Subject: [PATCH] drm/msm/dpu: TB321FU DSC width rounding
+
+From GUF296's TB321FU-7.1.1 tree: round the DSC-compressed timing width up
+instead of truncating.
+
+The companion GUF change that skipped the first primary SSPP programming
+after a display resume is dropped: on 7.2 the SSPP registers are zero after
+the DPU power-collapses, so skipping that commit makes the pipe fetch from
+IOVA 0, the corrupted DSC stream desyncs the panel decoder and the whole
+--- a/drivers/gpu/drm/msm/disp/dpu1/dpu_encoder_phys_vid.c
++++ b/drivers/gpu/drm/msm/disp/dpu1/dpu_encoder_phys_vid.c
+@@ -166,8 +166,10 @@
+ 			 * TODO: replace drm_dsc_get_bpp_int with logic to handle
+ 			 * fractional part if there is fraction
+ 			 */
+-			timing->width = timing->width * drm_dsc_get_bpp_int(dsc) /
+-					(dsc->bits_per_component * 3);
++			timing->width =
++				DIV_ROUND_UP(timing->width *
++					     drm_dsc_get_bpp_int(dsc),
++					     dsc->bits_per_component * 3);
+ 		}
+ 		timing->xres = timing->width;
+ 	}
