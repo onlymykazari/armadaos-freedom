@@ -133,3 +133,58 @@ fastboot reboot
   裁掉媒体/网络文件系统/BPF 等大块以压 Image 体积，但**保留完整 MSM 显示链**
   （KTZ8866 背光 + msm/DSI，simpledrm 作为接管前兜底），ramoops 落在
   0xa2000000，可与 Android 的 /sys/fs/pstore 互读。
+
+## 8. 从硬分区双系统（槽位切换）平滑迁移
+
+前提：机器处于 tb321fu-flash 的状态（槽 A = Android/GSI+SukiSU，槽 B =
+armada-tb321fu 的 UEFI 链，`armada_esp` + `armada_root` 已切好且在用）。
+
+### 8.1 数据与回退面
+
+本迁移**不写任何数据分区**：`userdata`、`armada_root`、`armada_esp`、
+`super`、`vbmeta` 全部原样；Linux 载荷的 bootargs 直接指向 `armada_root`
+的原 UUID，OS 侧无需任何改动。回退分两级：
+
+1. 临时切回旧方案：`fastboot set_active b` —— boot_b 的 UEFI→GRUB 链保持
+   完整，随时可进；
+2. 完全还原：再加 `fastboot flash boot_a <boot_a 备份>` +
+   `fastboot set_active a`。
+
+额外兜底：即使打包镜像本身起不来，ABL 对 A 槽 7 次重试后会自动落到
+B 槽——迁移过程中不动 B 槽的 GPT 属性，旧 Linux 链始终是最后的安全网。
+
+### 8.2 关键约束：boot_a 的 96 MiB 预算
+
+现有 FAT 载荷约 111 MiB（Image 64 MB + initramfs 52 MB），还没算 base
+内核与 4 MiB shim——**原样打不进 96 MiB 的 boot_a**（这正是诊断 fragment
+存在的原因）。一步到位不可行，按里程碑走：
+
+| 里程碑 | 内容 | 体积 | 风险 |
+|---|---|---|---|
+| M1 菜单验证 | base 内核 + 4 MiB shim（§3 路径，Android-only 菜单） | base+4M，稳进预算 | 零（尚无 Linux 条目） |
+| M2 诊断载荷 | + 诊断内核（diag fragment，保留显示链）+ 最小 initramfs | 需实测 | 低 |
+| M3 完整 OS | + 完整载荷：initramfs 瘦身（目标 ≤20 MB）+ 必要时再裁 Image | 需实测 | 中 |
+
+每次重打包都会覆盖 boot_a——**每次刷写前都先备份当次 boot_a**。
+
+### 8.3 操作顺序（M1）
+
+1. 备份：从正在运行的 Linux
+   `dd if=/dev/disk/by-partlabel/boot_a of=boot_a-backup.img` 带回 PC
+   （这是 Android 当前在用的内核，必须备份）；
+2. 用该备份作 `--stock-boot` 走 §3 打包 M1 镜像；
+3. `fastboot flash boot_a <M1镜像>` → `fastboot set_active a`；
+4. 首次开机**先选一次 Android**（bootctl 把 A 槽标记 successful，避免
+   ABL 的 7 次重试计数把启动项打回 B）；
+5. 回退演练：`fastboot set_active b` 应直接回到旧 Linux 链。
+
+### 8.4 过渡期注意事项
+
+- 旧 OS 的 `tb321fu-grub-sync` 关机时仍会改写 `armada_esp` 的 FAT（对新
+  路径无害但已无用），`tb321fu-mark-boot-successful` 会给 boot_b 置位
+  （无害）。切到菜单路径后建议 mask 这两个服务；
+- **内核更新缺口**：OS 的 bootc 升级只更新 `armada_root` 里的部署，
+  boot_a 里打包的内核不会自动跟随（grub-sync 只写 FAT）。过渡期每次
+  内核更新后在 PC 侧重打包 boot_a；把 `armada-kshim-sync` 流程接到该 OS
+  是后续工作；
+- 打包镜像未签名，永远不要重新锁定 bootloader。
